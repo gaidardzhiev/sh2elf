@@ -392,7 +392,6 @@ static size_t add_str(Gen *g, const char *s) {
 	return sp_add(&g->strs, s);
 }
 
-/* after adding mov_rdi_str above, we need a real relocation add: */
 static void rels_add_here(Gen *g, size_t at, size_t sidx) {
 	if(g->rels.n==g->rels.cap) {
 		g->rels.cap=g->rels.cap?g->rels.cap*2:64;
@@ -403,7 +402,6 @@ static void rels_add_here(Gen *g, size_t at, size_t sidx) {
 	};
 }
 
-/* redefine mov_rdi_str/mov_rsi_str using rels_add_here */
 #undef mov_rdi_str
 #undef mov_rsi_str
 static void mov_rdi_str(Code *c, Gen *g, size_t sidx) {
@@ -534,7 +532,7 @@ static void emit_exec(Code *c, Gen *g, Stage *st, size_t argv_area_off, size_t e
 		sys_execve(c);
 		c8(c,0x48);
 		c8(c,0x85);
-		c8(c,0xC0); /* test rax,rax */
+		c8(c,0xC0);
 		size_t jmp = jne_rel32(c);
 		patch_here(c,jmp);
 		mov_rdi_str(c,g,s2);
@@ -561,11 +559,9 @@ static void emit_simple_cmd(Code *c, Gen *g, Stage *st, size_t argv_area_off, si
 	emit_redirs(c,g, st->in_redir, st->out_redir, st->out_append);
 	emit_exec(c,g,st,argv_area_off,envp_off);
 	patch_here(c, jnz_parent);
-	/* wait4(rax,0,0,0) */
-	/* rax=pid still here */
 	c8(c,0x48);
 	c8(c,0x89);
-	c8(c,0xC7); /* mov rdi, rax */
+	c8(c,0xC7);
 	xor_rsi_rsi(c);
 	xor_rdx_rdx(c);
 	xor_r10_r10(c);
@@ -582,7 +578,6 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 	g->bss_off += 8*n;
 	size_t pipe_area_off = g->bss_off;
 	g->bss_off += 8*2;
-	/* prev_read_fd = -1 */
 	mov_rdi_imm64(c, g->bss_base + prev_read_off);
 	mov_rdx_imm64(c, (uint64_t)-1);
 	c8(c,0x48);
@@ -661,7 +656,6 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 			sys_close(c);
 		}
 	}
-	/* close prev_read_fd if nonzero */
 	mov_rdi_imm64(c, g->bss_base + prev_read_off);
 	c8(c,0x48);
 	c8(c,0x8B);
@@ -807,6 +801,6 @@ int main(int argc, char **argv) {
 	g.bss_base=0x600000;
 	gen_script(&g,&sc);
 	write_elf(out,&g);
-	fprintf(stderr,"wrote ELF64 x86_64 shell program to %s\n", out);
+	fprintf(stderr,"wrote ELF64 x86_64 to %s\n", out);
 	return 0;
 }
