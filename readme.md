@@ -78,7 +78,7 @@ The `sh2elf` compiler includes a fully integrated tokenizer and parser to transf
 
 - The parser consumes tokens sequentially and organizes them into a hierarchical structure representing the shell script logic:
   - **Stage**: Represents a single command and its arguments, along with input/output redirections.
-  - **Pipeline**: A sequence of `Stage`s connected by pipe `|` operators.
+  - **Pipeline**: A sequence of `Stage`'s connected by pipe `|` operators.
   - **Script**: One or more pipelines separated by command terminators (`;` or newline).
 - Redirections are parsed and attached to the relevant `Stage`.
 - Error checking is performed to detect syntax errors such as missing command after a pipe or unterminated quotes.
