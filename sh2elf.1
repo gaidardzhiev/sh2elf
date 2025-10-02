@@ -1,0 +1,49 @@
+.TH sh2elf 1 "October 2025" "shell to elf compiler" "User Commands"
+
+.SH NAME
+sh2elf \- compile a shell script into a native ELF64 executable
+
+.SH SYNOPSIS
+.B sh2elf
+.I script.sh
+-o 
+.I elf.out
+
+.SH DESCRIPTION
+The
+.B sh2elf
+tool reads the shell script containing commands, pipelines, and redirections, and compiles it into a standalone ELF64 executable for Linux x86_64. It does not interpret the script at runtime but translates it into native code that executes equivalent shell behavior directly using Linux syscalls.
+
+Command pipelines are implemented via process forking, Unix pipes, and file descriptor redirections managed in the generated code. Simple built-in commands like \fBecho\fR, \fBcd\fR, and \fBexit\fR are implemented inline, while external commands are executed using \fBexecve\fR.
+
+The produced binary includes embedded arguments and string literals, a minimal ELF header and program segments, and runtime logic for command execution without relying on any external shell.
+
+.SH OPTIONS
+.TP
+\fB-o elf.out\fR
+Specify the output ELF executable filename (default is \fBa.out\fR).
+
+.SH USAGE
+Given a shell script \fBscript.sh\fR:
+
+.nf
+$ ./sh2elf script.sh -o out.elf
+.fi
+
+generates \fBout.elf\fR, a native executable which runs the commands defined in \fBscript.sh\fR.
+
+.SH LIMITATIONS
+.IP "•" 2
+Supports a limited shell syntax subset: commands, pipes, and redirection.
+
+.IP "•" 2
+No variable expansion, loops or conditionals.
+
+.IP "•" 2
+Assumes Linux x86_64 syscalls and ABI.
+
+.SH AUTHOR
+Ivan Gaydardzhiev, 2025
+
+.SH LICENSE
+GPL-3.0 only
