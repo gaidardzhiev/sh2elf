@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025 Ivan Gaydardzhiev
+ * Licensed under the GPL-3.0-only
+ */
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <stdio.h>
