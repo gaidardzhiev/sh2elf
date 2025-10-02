@@ -1,6 +1,6 @@
 # sh2elf
 
-This project is a minimalistic shell script compiler written in `C` that compiles simple shell scripts into `ELF64` executables for `Linux` on `x86_64` architecture. It translates shell command lines into machine code, embeds them in an `ELF` binary, and handles process control and system calls natively without relying on an external shell or interpreter.
+This project is a minimalistic shell script compiler written in `C` that compiles shell scripts into `ELF64` executables for `Linux` on `x86_64` architecture. It translates shell command lines into machine code, embeds them in an `ELF` binary, and handles process control and system calls natively without relying on an external shell or interpreter.
 
 ## Building
 
