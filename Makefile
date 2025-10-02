@@ -1,11 +1,12 @@
-CC=musl-gcc
-FLAGS=-O2 -Wall -Wextra -no-pie -static
+CC=gcc
+CFLAGS=-O2 -Wall -Wextra -std=c11
+LDFLAGS=-no-pie
 BIN=sh2elf
 
 all: $(BIN)
 
 $(BIN): sh2elf.c
-	$(CC) $(FLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
 	rm -f $(BIN)

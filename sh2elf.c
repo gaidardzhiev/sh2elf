@@ -1,8 +1,12 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 typedef struct {
 	uint8_t *data;
@@ -27,6 +31,21 @@ static void bput(Buf *b, const void *p, size_t n) {
 
 static void b8(Buf *b, uint8_t x) {
 	bput(b,&x,1);
+}
+
+static char *buf_to_cstr(Buf *b) {
+	b8(b, 0);
+	char *s = (char*)malloc(b->len);
+	if(!s) {
+		perror("malloc");
+		exit(1);
+	}
+	memcpy(s, b->data, b->len);
+	s[b->len-1] = '\0';
+	free(b->data);
+	b->data=NULL;
+	b->len=b->cap=0;
+	return s;
 }
 
 static void le16(uint8_t *p, uint16_t x) {
@@ -161,6 +180,11 @@ static void mov_rdi_rax(Code *c) {
 	c8(c,0x48);
 	c8(c,0x89);
 	c8(c,0xC7);
+}
+
+static void mov_eax_mrdi(Code *c) {
+	c8(c,0x8B);
+	c8(c,0x07);
 }
 
 static void syscall_(Code *c) {
@@ -310,72 +334,147 @@ static char *readfile(const char *path) {
 	return buf;
 }
 
-static int is_space(int c) {
-	return c==' '||c=='\t'||c=='\r'||c=='\n';
+static void parse_error(const char *msg) {
+	fprintf(stderr, "parse error: %s\n", msg);
+	exit(1);
+}
+
+static void skip_inline_ws(const char **pp) {
+	while(**pp==' ' || **pp=='\t' || **pp=='\r') (*pp)++;
+}
+
+static int is_token_terminator(char c) {
+	return c=='\0' || c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='|' || c==';' || c=='<' || c=='>';
+}
+
+static char *parse_word(const char **pp) {
+	Buf buf;
+	binit(&buf);
+	const char *p = *pp;
+	while(*p) {
+		if(*p=='\\') {
+			p++;
+			if(*p=='\0') parse_error("trailing escape");
+			b8(&buf, (uint8_t)*p++);
+			continue;
+		}
+		if(*p=='"') {
+			p++;
+			int closed = 0;
+			while(*p) {
+				if(*p=='"') {
+					closed = 1;
+					p++;
+					break;
+				}
+				if(*p=='\\') {
+					p++;
+					if(*p=='\0') parse_error("unterminated escape in quotes");
+					char esc = *p++;
+					if(esc=='"' || esc=='\\' || esc=='$' || esc=='`') {
+						b8(&buf, (uint8_t)esc);
+					} else if(esc=='\n') {
+					} else {
+						b8(&buf, (uint8_t)'\\');
+						b8(&buf, (uint8_t)esc);
+					}
+				} else {
+					b8(&buf, (uint8_t)*p++);
+				}
+			}
+			if(!closed) parse_error("unterminated double quote");
+			continue;
+		}
+		if(*p=='\'') {
+			p++;
+			while(*p && *p!='\'') {
+				b8(&buf, (uint8_t)*p++);
+			}
+			if(*p!='\'') parse_error("unterminated single quote");
+			p++;
+			continue;
+		}
+		if(is_token_terminator(*p)) break;
+		b8(&buf, (uint8_t)*p++);
+	}
+	if(buf.len==0) return NULL;
+	char *word = buf_to_cstr(&buf);
+	*pp = p;
+	return word;
+}
+
+static void finish_stage(Pipeline *pl, Stage *st) {
+	if(st->argv.n==0) {
+		if(st->in_redir || st->out_redir) parse_error("redirection without command");
+		return;
+	}
+	pl_push(pl, *st);
+	*st = (Stage){0};
 }
 
 static Script parse(const char *src) {
-	Script sc= {0};
-	Pipeline cur= {0};
-	Stage st= {0};
-#define NEW_STAGE() do{ st=(Stage){0}; }while(0)
-	NEW_STAGE();
-	const char *p=src;
+	Script sc = {0};
+	Pipeline cur = {0};
+	Stage st = {0};
+	const char *p = src;
+	int expect_stage = 0;
 	while(*p) {
-		while(is_space(*p) && *p!='\n') p++;
+		skip_inline_ws(&p);
+		if(*p=='\0') break;
 		if(*p=='\n' || *p==';') {
+			if(expect_stage) parse_error("pipeline stage missing command");
 			if(st.argv.n>0) {
-				pl_push(&cur, st);
-				NEW_STAGE();
+				finish_stage(&cur, &st);
+			} else if(st.in_redir || st.out_redir) {
+				parse_error("redirection without command");
 			}
 			if(cur.n>0) {
 				sc_push(&sc, cur);
-				cur=(Pipeline) {
-					0
-				};
+				cur = (Pipeline){0};
 			}
-			if(*p) {
-				p++;
-			}
+			expect_stage = 0;
+			while(*p=='\n' || *p==';') p++;
 			continue;
 		}
 		if(*p=='|') {
-			pl_push(&cur, st);
-			NEW_STAGE();
+			if(st.argv.n==0) parse_error("empty pipeline stage");
+			finish_stage(&cur, &st);
+			expect_stage = 1;
 			p++;
 			continue;
 		}
-		if(*p=='>') {
-			p++;
-			int append=0;
-			if(*p=='>') {
-				append=1;
+		if(*p=='>' || *p=='<') {
+			char op = *p++;
+			int append = 0;
+			if(op=='>' && *p=='>') {
+				append = 1;
 				p++;
 			}
-			while(is_space(*p)) p++;
-			const char *q=p;
-			while(*q && !is_space(*q) && *q!='|' && *q!=';' && *q!='\n' && *q!='<' && *q!='>') q++;
-			st.out_redir=strndup(p,q-p);
-			st.out_append=append;
-			p=q;
+			skip_inline_ws(&p);
+			if(*p=='\0' || *p=='\n' || *p=='|' || *p==';' || *p=='<' || *p=='>') parse_error("missing redirection target");
+			char *target = parse_word(&p);
+			if(!target) parse_error("missing redirection target");
+			if(op=='<') {
+				if(st.in_redir) free(st.in_redir);
+				st.in_redir = target;
+			} else {
+				if(st.out_redir) free(st.out_redir);
+				st.out_redir = target;
+				st.out_append = append;
+			}
 			continue;
 		}
-		if(*p=='<') {
-			p++;
-			while(is_space(*p)) p++;
-			const char *q=p;
-			while(*q && !is_space(*q) && *q!='|' && *q!=';' && *q!='\n' && *q!='<' && *q!='>') q++;
-			st.in_redir=strndup(p,q-p);
-			p=q;
-			continue;
-		}
-		if(*p==0) break;
-		const char *q=p;
-		while(*q && !is_space(*q) && *q!='|' && *q!=';' && *q!='\n' && *q!='<' && *q!='>') q++;
-		sv_push(&st.argv, strndup(p,q-p));
-		p=q;
+		char *word = parse_word(&p);
+		if(!word) parse_error("expected word");
+		sv_push(&st.argv, word);
+		expect_stage = 0;
 	}
-	if(st.argv.n>0) pl_push(&cur, st);
+	if(expect_stage) parse_error("pipeline stage missing command");
+	if(st.argv.n>0) {
+		finish_stage(&cur, &st);
+	} else if(st.in_redir || st.out_redir) {
+		parse_error("redirection without command");
+	}
 	if(cur.n>0) sc_push(&sc, cur);
 	return sc;
 }
@@ -603,26 +702,26 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 			mov_rdi_rax(c);
 			mov_rsi_imm64(c,0);
 			sys_dup2(c);
+			mov_rdi_imm64(c, g->bss_base + prev_read_off);
+			c8(c,0x48);
+			c8(c,0x8B);
+			c8(c,0x07);
 			mov_rdi_rax(c);
 			sys_close(c);
 		}
 		if(has_next) {
-			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 8);
-			c8(c,0x48);
-			c8(c,0x8B);
-			c8(c,0x07);
+			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 4);
+			mov_eax_mrdi(c);
 			mov_rdi_rax(c);
 			mov_rsi_imm64(c,1);
 			sys_dup2(c);
 			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 0);
-			c8(c,0x48);
-			c8(c,0x8B);
-			c8(c,0x07);
+			mov_eax_mrdi(c);
+			mov_rdi_rax(c);
 			sys_close(c);
-			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 8);
-			c8(c,0x48);
-			c8(c,0x8B);
-			c8(c,0x07);
+			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 4);
+			mov_eax_mrdi(c);
+			mov_rdi_rax(c);
 			sys_close(c);
 		}
 		emit_redirs(c,g, pl->v[i].in_redir, pl->v[i].out_redir, pl->v[i].out_append);
@@ -642,17 +741,14 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 		c8(c,0x07);
 		if(has_next) {
 			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 0);
-			c8(c,0x48);
-			c8(c,0x8B);
-			c8(c,0x07);
+			mov_eax_mrdi(c);
 			mov_rdi_imm64(c, g->bss_base + prev_read_off);
 			c8(c,0x48);
 			c8(c,0x89);
 			c8(c,0x07);
-			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 8);
-			c8(c,0x48);
-			c8(c,0x8B);
-			c8(c,0x07);
+			mov_rdi_imm64(c, g->bss_base + pipe_area_off + 4);
+			mov_eax_mrdi(c);
+			mov_rdi_rax(c);
 			sys_close(c);
 		}
 	}
@@ -747,6 +843,15 @@ static void write_elf(const char *out, Gen *g) {
 		exit(1);
 	}
 	fwrite(file.data,1,file.len,f);
+	int fd = fileno(f);
+	if(fd<0) {
+		perror("fileno");
+		exit(1);
+	}
+	if(fchmod(fd, 0755)<0) {
+		perror("fchmod");
+		exit(1);
+	}
 	fclose(f);
 }
 
