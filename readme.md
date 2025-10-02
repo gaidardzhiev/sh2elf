@@ -1,6 +1,6 @@
 # sh2elf
 
-`sh2elf` is a compiler that translates a restricted subset of `POSIX` shell scripts into statically positioned `ELF` executables for`x86_64` `Linux`. The generated programs rely only on raw system calls and bundle command strings inside the binary.
+This project is a minimalistic shell script compiler written in `C` that compiles simple shell scripts into `ELF64` executables for `Linux` on `x86_64` architecture. It translates shell command lines into machine code, embeds them in an `ELF` binary, and handles process control and system calls natively without relying on an external shell or interpreter.
 
 ## Building
 
@@ -53,10 +53,10 @@ The source language is intentionally tiny. Anything outside the rules below is r
 Translate and run the included samples:
 
 ```sh
-./sh2elf tests/hello.sh -o hello
+./sh2elf scripts/hello.sh -o hello
 ./hello
 
-./sh2elf tests/pipeline.sh -o pipeline
+./sh2elf scripts/pipeline.sh -o pipeline
 ./pipeline
 ```
 
