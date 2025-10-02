@@ -1,1 +1,1 @@
-echo foo | wc -c
+echo "!!! Hello World !!!" | wc -c
