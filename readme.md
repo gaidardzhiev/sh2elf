@@ -60,6 +60,10 @@ Translate and run the included samples:
 ./pipeline
 ```
 
-## Development notes
+---
 
-Recent changes tightened the parser (proper quoting/escaping rules, dangling pipeline detection), fixed pipeline file descriptor handling, and ensured emitted ELF files are marked executable directly.
+## License
+
+This project is provided under the GPL3 License.
+
+---
