@@ -6,11 +6,20 @@ N='\033[0m'
 
 ARCH=$(uname -m)
 
-[ ! "${ARCH}" = "x86_64" ] && { printf "unsupported architecture %s...\n" "${ARCH}"; exit 1; }
+[ ! "${ARCH}" = "x86_64" ] && { 
+	printf "unsupported architecture %s...\n" "${ARCH}";
+	exit 1;
+}
 
-[ ! -f sh2elf ] && { make; printf "\n"; }
+[ ! -f sh2elf ] && { 
+	make;
+	printf "\n";
+}
 
-[ ! -f pipe.elf ] && { ./sh2elf scripts/pipeline.sh -o pipe.elf; printf "\n"; }
+[ ! -f pipe.elf ] && { 
+	./sh2elf scripts/pipeline.sh -o pipe.elf; 
+	printf "\n";
+}
 
 fprint() {
 	 printf "[%s] Test: %-20s Result: %b\n" "$(date '+%Y-%m-%d %H:%M:%S')" "${1}" "${2}"
