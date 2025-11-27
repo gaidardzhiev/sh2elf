@@ -63,6 +63,9 @@ Translate and run the included samples:
 
 ./sh2elf scripts/pipeline.sh -o pipeline
 ./pipeline
+
+./sh2elf scripts/logic.sh -o logic
+./logic
 ```
 
 ## Parsing, Tokenizing, and Code Generation
