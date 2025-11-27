@@ -212,6 +212,14 @@ static size_t jne_rel32(Code *c) {
 	return pos;
 }
 
+static size_t js_rel32(Code *c) {
+	c8(c,0x0F);
+	c8(c,0x88);
+	size_t pos=cpos(c);
+	c32(c,0);
+	return pos;
+}
+
 static void patch_here(Code *c, size_t at) {
 	uint32_t rel=(uint32_t)(cpos(c)-(at+4));
 	patch32(&c->code, at, rel);
@@ -222,6 +230,18 @@ static void mov_m8_rdi_disp32_rax(Code *c, uint32_t disp) {
 	c8(c,0x89);
 	c8(c,0x87);
 	c32(c,disp);
+}
+
+static void shr_rax_imm8(Code *c, uint8_t sh) {
+	c8(c,0x48);
+	c8(c,0xC1);
+	c8(c,0xE8);
+	c8(c,sh);
+}
+
+static void and_eax_imm32(Code *c, uint32_t imm) {
+	c8(c,0x25);
+	c32(c,imm);
 }
 
 static void sys_write(Code *c) {
@@ -298,6 +318,11 @@ typedef struct {
 	int n, cap;
 } Pipeline;
 
+typedef struct {
+	Pipeline pl;
+	int cond;
+} ScriptEntry;
+
 static void pl_push(Pipeline *p, Stage st) {
 	if(p->n==p->cap) {
 		p->cap=p->cap?2*p->cap:4;
@@ -307,16 +332,22 @@ static void pl_push(Pipeline *p, Stage st) {
 }
 
 typedef struct {
-	Pipeline *v;
+	ScriptEntry *v;
 	int n, cap;
 } Script;
 
-static void sc_push(Script *s, Pipeline p) {
+enum {
+	COND_ALWAYS = 0,
+	COND_PREV_SUCCESS = 1,
+	COND_PREV_FAILURE = 2,
+};
+
+static void sc_push(Script *s, Pipeline p, int cond) {
 	if(s->n==s->cap) {
 		s->cap=s->cap?2*s->cap:4;
-		s->v=(Pipeline*)realloc(s->v,s->cap*sizeof(Pipeline));
+		s->v=(ScriptEntry*)realloc(s->v,s->cap*sizeof(ScriptEntry));
 	}
-	s->v[s->n++]=p;
+	s->v[s->n++]=(ScriptEntry){.pl=p,.cond=cond};
 }
 
 static char *readfile(const char *path) {
@@ -349,7 +380,7 @@ static void skip_inline_ws(const char **pp) {
 }
 
 static int is_token_terminator(char c) {
-	return c=='\0' || c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='|' || c==';' || c=='<' || c=='>';
+	return c=='\0' || c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='|' || c==';' || c=='<' || c=='>' || c=='&';
 }
 
 static char *parse_word(const char **pp) {
@@ -423,25 +454,60 @@ static Script parse(const char *src) {
 	Stage st = {0};
 	const char *p = src;
 	int expect_stage = 0;
+	int expect_pipeline = 0;
+	int pending_cond = COND_ALWAYS;
 	while(*p) {
 		skip_inline_ws(&p);
 		if(*p=='\0') break;
+		if(*p=='#') {
+			while(*p && *p!='\n') p++;
+			continue;
+		}
 		if(*p=='\n' || *p==';') {
 			if(expect_stage) parse_error("pipeline stage missing command");
+			if(*p==';' && expect_pipeline) parse_error("missing command after &&/||");
 			if(st.argv.n>0) {
 				finish_stage(&cur, &st);
 			} else if(st.in_redir || st.out_redir) {
 				parse_error("redirection without command");
 			}
 			if(cur.n>0) {
-				sc_push(&sc, cur);
+				sc_push(&sc, cur, pending_cond);
 				cur = (Pipeline){0};
+				pending_cond = COND_ALWAYS;
 			}
 			expect_stage = 0;
 			while(*p=='\n' || *p==';') p++;
 			continue;
 		}
+		if(*p=='&') {
+			if(p[1]=='&') {
+				if(st.argv.n==0) parse_error("missing command before &&");
+				finish_stage(&cur, &st);
+				if(cur.n==0) parse_error("missing command before &&");
+				sc_push(&sc, cur, pending_cond);
+				cur = (Pipeline){0};
+				pending_cond = COND_PREV_SUCCESS;
+				expect_stage = 0;
+				expect_pipeline = 1;
+				p+=2;
+				continue;
+			}
+			parse_error("unsupported token &");
+		}
 		if(*p=='|') {
+			if(p[1]=='|') {
+				if(st.argv.n==0) parse_error("missing command before ||");
+				finish_stage(&cur, &st);
+				if(cur.n==0) parse_error("missing command before ||");
+				sc_push(&sc, cur, pending_cond);
+				cur = (Pipeline){0};
+				pending_cond = COND_PREV_FAILURE;
+				expect_stage = 0;
+				expect_pipeline = 1;
+				p+=2;
+				continue;
+			}
 			if(st.argv.n==0) parse_error("empty pipeline stage");
 			finish_stage(&cur, &st);
 			expect_stage = 1;
@@ -473,14 +539,16 @@ static Script parse(const char *src) {
 		if(!word) parse_error("expected word");
 		sv_push(&st.argv, word);
 		expect_stage = 0;
+		expect_pipeline = 0;
 	}
 	if(expect_stage) parse_error("pipeline stage missing command");
+	if(expect_pipeline) parse_error("missing command after &&/||");
 	if(st.argv.n>0) {
 		finish_stage(&cur, &st);
 	} else if(st.in_redir || st.out_redir) {
 		parse_error("redirection without command");
 	}
-	if(cur.n>0) sc_push(&sc, cur);
+	if(cur.n>0) sc_push(&sc, cur, pending_cond);
 	return sc;
 }
 
@@ -490,6 +558,7 @@ typedef struct {
 	Rels rels;
 	size_t bss_base;
 	size_t bss_off;
+	size_t status_off;
 } Gen;
 
 static size_t add_str(Gen *g, const char *s) {
@@ -581,11 +650,35 @@ static void emit_redirs(Code *c, Gen *g, const char *in_redir, const char *out_r
 	}
 }
 
+static uint64_t status_addr(Gen *g) {
+	return g->bss_base + g->status_off;
+}
+
+static void store_status_imm(Code *c, Gen *g, uint32_t val) {
+	mov_rax_imm32(c,val);
+	mov_rdi_imm64(c, status_addr(g));
+	mov_m8_rdi_disp32_rax(c,0);
+}
+
+static void store_status_from_wait(Code *c, Gen *g) {
+	mov_rdi_imm64(c, status_addr(g));
+	mov_eax_mrdi(c);
+	shr_rax_imm8(c,8);
+	and_eax_imm32(c,0xFF);
+	mov_rdi_imm64(c, status_addr(g));
+	mov_m8_rdi_disp32_rax(c,0);
+}
+
+static void load_status_eax(Code *c, Gen *g) {
+	mov_rdi_imm64(c, status_addr(g));
+	mov_eax_mrdi(c);
+}
+
 static int is_builtin(const char *cmd) {
 	return (strcmp(cmd,"echo")==0) || (strcmp(cmd,"cd")==0) || (strcmp(cmd,"exit")==0);
 }
 
-static void emit_builtin(Code *c, Gen *g, Stage *st) {
+static void emit_builtin(Code *c, Gen *g, Stage *st, int update_status) {
 	const char *cmd = st->argv.v[0];
 	if(strcmp(cmd,"echo")==0) {
 		for(int i=1; i<st->argv.n; i++) {
@@ -593,6 +686,7 @@ static void emit_builtin(Code *c, Gen *g, Stage *st) {
 			if(i+1<st->argv.n) write_literal(c,g, " ");
 		}
 		write_literal(c,g, "\n");
+		if(update_status) store_status_imm(c,g,0);
 		return;
 	}
 	if(strcmp(cmd,"cd")==0) {
@@ -600,6 +694,15 @@ static void emit_builtin(Code *c, Gen *g, Stage *st) {
 			size_t sidx = add_str(g, st->argv.v[1]);
 			mov_rdi_str(c,g,sidx);
 			sys_chdir(c);
+			if(update_status) store_status_imm(c,g,1);
+			c8(c,0x48);
+			c8(c,0x85);
+			c8(c,0xC0);
+			size_t js = js_rel32(c);
+			if(update_status) store_status_imm(c,g,0);
+			patch_here(c, js);
+		} else if(update_status) {
+			store_status_imm(c,g,0);
 		}
 		return;
 	}
@@ -651,7 +754,7 @@ static void emit_exec(Code *c, Gen *g, Stage *st, size_t argv_area_off, size_t e
 
 static void emit_simple_cmd(Code *c, Gen *g, Stage *st, size_t argv_area_off, size_t envp_off) {
 	if(is_builtin(st->argv.v[0])) {
-		emit_builtin(c,g,st);
+		emit_builtin(c,g,st,1);
 		return;
 	}
 	sys_fork(c);
@@ -666,10 +769,11 @@ static void emit_simple_cmd(Code *c, Gen *g, Stage *st, size_t argv_area_off, si
 	c8(c,0x48);
 	c8(c,0x89);
 	c8(c,0xC7);
-	xor_rsi_rsi(c);
+	mov_rsi_imm64(c, status_addr(g));
 	xor_rdx_rdx(c);
 	xor_r10_r10(c);
 	sys_wait4(c);
+	store_status_from_wait(c,g);
 }
 
 static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
@@ -731,7 +835,7 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 		}
 		emit_redirs(c,g, pl->v[i].in_redir, pl->v[i].out_redir, pl->v[i].out_append);
 		if(is_builtin(pl->v[i].argv.v[0])) {
-			emit_builtin(c,g, &pl->v[i]);
+			emit_builtin(c,g, &pl->v[i], 0);
 			mov_rdi_imm64(c,0);
 			sys_exit(c);
 		} else {
@@ -775,10 +879,12 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 		c8(c,0x8B);
 		c8(c,0x07);
 		mov_rdi_rax(c);
-		xor_rsi_rsi(c);
+		if(i+1==n) mov_rsi_imm64(c, status_addr(g));
+		else xor_rsi_rsi(c);
 		xor_rdx_rdx(c);
 		xor_r10_r10(c);
 		sys_wait4(c);
+		if(i+1==n) store_status_from_wait(c,g);
 	}
 }
 
@@ -867,12 +973,23 @@ static void gen_script(Gen *g, Script *sc) {
 		0
 	};
 	g->bss_off=0;
+	g->status_off=g->bss_off;
+	g->bss_off+=8;
 	for(int i=0; i<sc->n; i++) {
-		Pipeline *pl=&sc->v[i];
+		ScriptEntry *ent=&sc->v[i];
+		Pipeline *pl=&ent->pl;
+		size_t skip=0;
+		if(ent->cond!=COND_ALWAYS) {
+			load_status_eax(&g->code,g);
+			c8(&g->code,0x85);
+			c8(&g->code,0xC0);
+			if(ent->cond==COND_PREV_SUCCESS) skip=jne_rel32(&g->code);
+			else skip=je_rel32(&g->code);
+		}
 		if(pl->n==1) {
 			Stage *st=&pl->v[0];
 			if(is_builtin(st->argv.v[0])) {
-				emit_builtin(&g->code,g,st);
+				emit_builtin(&g->code,g,st,1);
 			} else {
 				size_t envp_off = g->bss_off;
 				g->bss_off += 8;
@@ -883,6 +1000,7 @@ static void gen_script(Gen *g, Script *sc) {
 		} else {
 			emit_pipeline(&g->code,g,pl);
 		}
+		if(skip) patch_here(&g->code, skip);
 	}
 	mov_rdi_imm64(&g->code,0);
 	sys_exit(&g->code);
