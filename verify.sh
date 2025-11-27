@@ -20,12 +20,21 @@ fprint() {
 	 printf "[%s] Test: %-20s Result: %b\n" "$(date '+%Y-%m-%d %H:%M:%S')" "${1}" "${2}"
 }
 
+fhello() {
+	./sh2elf scripts/hello.sh -o hello.elf >/dev/null
+	CAPTURE=$(./hello.elf)
+	EXPECTED="Hello World!"
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Hello World Test" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Hello World Test" "${R}FAILED${N}";
+		return 	8;
+	}
+}
+
 fpipe() {
 	./sh2elf scripts/pipeline.sh -o pipe.elf >/dev/null
-	if command -v strace >/dev/null 2>&1; then
-		strace ./pipe.elf
-		printf "\n\n"
-	fi
 	CAPTURE=$(./pipe.elf)
 	EXPECTED="20"
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -33,7 +42,7 @@ fpipe() {
 		return 0;
 	} || {
 		fprint "Pipeline Test" "${R}FAILED${N}";
-		return 	32;
+		return 	16;
 	}
 }
 
@@ -54,10 +63,10 @@ EOF
 	} || {
 		fprint "Logic Test" "${R}FAILED${N}";
 #		printf "captured output:\n%s\nexpected output:\n%s\nstatus=%s\n" "${CAPTURE}" "${EXPECTED}" "${STATUS}"
-		return 64;
+		return 32;
 	}
 }
 
-{ fcheck && flogic; RETURN="${?}"; } || exit 1
+{ fhello && fpipe && flogic; RETURN="${?}"; } || exit 1
 
 [ "${RETURN}" -eq 0 ] 2>/dev/null || printf "%s\n" "${RETURN}"
