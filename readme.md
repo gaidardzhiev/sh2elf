@@ -23,7 +23,11 @@ The source language is intentionally tiny. Anything outside the rules below is r
 
 - **Command layout**: commands are separated by newlines or `;`. Blank lines are ignored. Trailing `|` entries are rejected.
 
+- **Comments**: unquoted `#` begins a comment that extends to the end of the current line (after any inline whitespace). Inside single or double quotes `#` is treated literally.
+
 - **Pipelines**: the `|` operator connects stdout of the left stage to stdin of the right one. Arbitrary length pipelines are supported, mixing built-ins and external commands.
+
+- **Conditional execution**: `&&` runs the following pipeline only when the previous command succeeds (exit status `0`), while `||` runs the next pipeline only when the previous command fails (non-zero status). Conditions short-circuit without altering the last exit status.
 
 - **Redirection**: each stage accepts a single input (`< file`) and single output redirection (`> file` overwrite, `>> file` append). Redirections must have a word argument and cannot appear without an accompanying command.
 
@@ -45,7 +49,8 @@ The source language is intentionally tiny. Anything outside the rules below is r
 
 ### Not supported
 
-- Comments (`# ...`), background jobs (`&`), logical operators (`&&`, `||`), subshells, functions, here documents, `set`, variable assignment, or environment inheritance.
+~~- Comments (`# ...`), background jobs (`&`), logical operators (`&&`, `||`), subshells, functions, here documents, `set`, variable assignment, or environment inheritance.~~
+- Background jobs (`&`), subshells, functions, here documents, `set`, variable assignment, or environment inheritance.
 - Signals are not trapped; generated programs exit on failed `execve` or unhandled system call errors.
 
 ## Examples
