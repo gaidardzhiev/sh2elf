@@ -14,9 +14,11 @@ The
 .B sh2elf
 tool reads the shell script containing commands, pipelines, and redirections, and compiles it into a standalone ELF64 executable for Linux x86_64. It does not interpret the script at runtime but translates it into native code that executes equivalent shell behavior directly using Linux syscalls.
 
-Command pipelines are implemented via process forking, Unix pipes, and file descriptor redirections managed in the generated code. Simple built-in commands like \fBecho\fR, \fBcd\fR, and \fBexit\fR are implemented inline, while external commands are executed using \fBexecve\fR.
+Command pipelines are implemented via process forking, Unix pipes, and file descriptor redirections managed in the generated code. Simple built in commands like \fBecho\fR, \fBcd\fR, and \fBexit\fR are implemented inline, while external commands are executed using \fBexecve\fR.
 
 The produced binary includes embedded arguments and string literals, a minimal ELF header and program segments, and runtime logic for command execution without relying on any external shell.
+
+Line oriented comments introduced with \fB#\fR (outside of quotes) are ignored, and the compiler understands the \fB&&\fR and \fB||\fR list operators, short circuiting execution according to the previous command's exit status.
 
 .SH OPTIONS
 .TP
@@ -34,7 +36,7 @@ generates \fBout.elf\fR, a native executable which runs the commands defined in 
 
 .SH LIMITATIONS
 .IP "•" 2
-Supports a limited shell syntax subset: commands, pipes, and redirection.
+Supports a limited shell syntax subset: commands, pipes, redirection, `#` comments, and the `&&`/`||` logical connectors.
 
 .IP "•" 2
 No variable expansion, loops or conditionals.
