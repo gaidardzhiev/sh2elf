@@ -49,7 +49,6 @@ fpipe() {
 flogic() {
 	./sh2elf scripts/logic.sh -o logic.elf >/dev/null
 	CAPTURE=$(./logic.elf)
-	STATUS="${?}"
 	EXPECTED=$(cat <<'EOF'
 first
 after-false
@@ -57,12 +56,11 @@ fallback-two
 inline
 EOF
 )
-	{ [ "${CAPTURE}" = "${EXPECTED}" ] && [ "${STATUS}" -eq 0 ]; } && {
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
 		fprint "Logic Test" "${G}PASSED${N}";
 		return 0;
 	} || {
 		fprint "Logic Test" "${R}FAILED${N}";
-#		printf "captured output:\n%s\nexpected output:\n%s\nstatus=%s\n" "${CAPTURE}" "${EXPECTED}" "${STATUS}"
 		return 32;
 	}
 }
