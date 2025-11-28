@@ -25,10 +25,10 @@ fhello() {
 	CAPTURE=$(./hello.elf)
 	EXPECTED="Hello World!"
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
-		fprint "Hello World Test" "${G}PASSED${N}";
+		fprint "Hello World" "${G}PASSED${N}";
 		return 0;
 	} || {
-		fprint "Hello World Test" "${R}FAILED${N}";
+		fprint "Hello World" "${R}FAILED${N}";
 		return 	8;
 	}
 }
@@ -38,10 +38,10 @@ fpipe() {
 	CAPTURE=$(./pipe.elf)
 	EXPECTED="20"
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
-		fprint "Pipeline Test" "${G}PASSED${N}";
+		fprint "Pipeline" "${G}PASSED${N}";
 		return 0;
 	} || {
-		fprint "Pipeline Test" "${R}FAILED${N}";
+		fprint "Pipeline" "${R}FAILED${N}";
 		return 	16;
 	}
 }
@@ -57,10 +57,10 @@ inline
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
-		fprint "Logic Test" "${G}PASSED${N}";
+		fprint "Logic" "${G}PASSED${N}";
 		return 0;
 	} || {
-		fprint "Logic Test" "${R}FAILED${N}";
+		fprint "Logic" "${R}FAILED${N}";
 		return 32;
 	}
 }
