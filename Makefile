@@ -22,4 +22,4 @@ install:
 	cp $(BIN).1 /usr/share/man/man1/
 
 clean:
-	rm -f $(BIN)
+	rm -f $(BIN) *.elf
