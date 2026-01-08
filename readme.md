@@ -55,15 +55,18 @@ The source language is intentionally tiny. Anything outside the rules below is r
 
 ## Examples
 
-Translate and run the included samples:
+Compile and run the included samples:
 
 ```sh
+cat scripts/hello.sh
 ./sh2elf scripts/hello.sh -o hello
 ./hello
 
+cat scripts/pipeline.sh
 ./sh2elf scripts/pipeline.sh -o pipeline
 ./pipeline
 
+cat scrits/logic.sh
 ./sh2elf scripts/logic.sh -o logic
 ./logic
 ```
