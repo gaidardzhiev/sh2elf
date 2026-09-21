@@ -3,10 +3,26 @@ CFLAGS=-O2 -Wall -Wextra -std=c11
 LDFLAGS=-no-pie
 BIN=sh2elf
 
-all: $(BIN)
+all: $(BIN) sh2elf-lsp test_diff fuzz_sh
 
 $(BIN): sh2elf.c
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
+sh2elf-lsp: sh2elf-lsp.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+test_diff: test_diff.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+fuzz_sh: fuzz_sh.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+test: all
+	./verify.sh
+	./test_diff
+
+fuzz: all
+	./fuzz_sh 100
 
 strip:
 	strip -S \
@@ -22,4 +38,4 @@ install:
 	cp $(BIN).1 /usr/share/man/man1/
 
 clean:
-	rm -f $(BIN) *.elf
+	rm -f $(BIN) sh2elf-lsp test_diff fuzz_sh *.elf *.o

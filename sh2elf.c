@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Ivan Gaydardzhiev
+ * Copyright (C) 2025-2026 Ivan Gaydardzhiev
  * Licensed under the GPL-3.0-only
  */
 
@@ -109,6 +109,10 @@ static void sp_init(StrPool *sp) {
 }
 
 static size_t sp_add(StrPool *sp, const char *s) {
+	for(size_t i=0; i<sp->n; i++) {
+		const char *ex = (const char*)(sp->pool.data + sp->offs[i]);
+		if(strcmp(ex, s)==0) return i;
+	}
 	size_t off = sp->pool.len;
 	size_t n = strlen(s);
 	bput(&sp->pool, s, n+1);
@@ -471,6 +475,20 @@ static int is_token_terminator(char c) {
 	return c=='\0' || c==' ' || c=='\t' || c=='\r' || c=='\n' || c=='|' || c==';' || c=='<' || c=='>' || c=='&' || c=='(' || c==')' || c=='{' || c=='}';
 }
 
+static char *parse_ident(const char **pp) {
+	const char *p = *pp;
+	while(*p==' ' || *p=='\t' || *p=='\r' || *p=='\n' || *p==';') p++;
+	if(!*p) { *pp = p; return NULL; }
+	const char *start = p;
+	while(*p && *p!=' ' && *p!='\t' && *p!='\r' && *p!='\n' && *p!=';') p++;
+	size_t len = (size_t)(p - start);
+	char *w = (char*)malloc(len + 1);
+	memcpy(w, start, len);
+	w[len] = '\0';
+	*pp = p;
+	return w;
+}
+
 static char *parse_word(const char **pp) {
 	Buf buf;
 	binit(&buf);
@@ -502,9 +520,24 @@ static char *parse_word(const char **pp) {
 						b8(&buf, (uint8_t)'\\');
 						b8(&buf, (uint8_t)esc);
 					}
-				} else {
-					b8(&buf, (uint8_t)*p++);
+					continue;
+				} else if(*p=='$') {
+					p++;
+					char vname[128];
+					int vi = 0;
+					if(*p=='{') {
+						p++;
+						while(*p && *p!='}' && vi < 127) vname[vi++] = *p++;
+						if(*p=='}') p++;
+					} else {
+						while(*p && ((*p>='A' && *p<='Z') || (*p>='a' && *p<='z') || (*p>='0' && *p<='9') || *p=='_') && vi < 127) vname[vi++] = *p++;
+					}
+					vname[vi] = '\0';
+					char *val = getenv(vname);
+					if(val) bput(&buf, val, strlen(val));
+					continue;
 				}
+				b8(&buf, (uint8_t)*p++);
 			}
 			if(!closed) parse_error("unterminated double quote");
 			continue;
@@ -699,7 +732,10 @@ static char *parse_word(const char **pp) {
 		if(is_token_terminator(*p)) break;
 		b8(&buf, (uint8_t)*p++);
 	}
-	if(buf.len==0) return NULL;
+	if(p == *pp) {
+		if(buf.data) free(buf.data);
+		return NULL;
+	}
 	char *word = buf_to_cstr(&buf);
 	*pp = p;
 	return word;
@@ -731,10 +767,9 @@ static Script parse(const char *src) {
 	Pipeline cur = {0};
 	Stage st = {0};
 	const char *p = src;
-	int expect_stage = 0;
-	int expect_pipeline = 0;
 	int pending_cond = COND_ALWAYS;
 	int is_until = 0;
+	int expect_stage = 0, expect_pipeline = 0;
 	while(*p) {
 		skip_inline_ws(&p);
 		if(*p=='\0') break;
@@ -747,8 +782,6 @@ static Script parse(const char *src) {
 			continue;
 		}
 		if(*p=='\n' || *p==';') {
-			if(expect_stage) parse_error("pipeline stage missing command");
-			if(*p==';' && expect_pipeline) parse_error("missing command after &&/||");
 			if(st.argv.n>0) {
 				finish_stage(&cur, &st);
 			} else if(st.in_redir || st.out_redir || st.err_redir) {
@@ -859,7 +892,7 @@ static Script parse(const char *src) {
 			continue;
 		}
 		char *word = parse_word(&p);
-		if(!word) parse_error("expected word");
+		if(!word) { p++; continue; }
 		if(st.argv.n==0) {
 			int is_fn_call = 0;
 			for(int fi=0; fi<g_funcs.n; fi++) {
@@ -990,28 +1023,41 @@ static Script parse(const char *src) {
 				if(targ) free(targ);
 				continue;
 			}
+			if(strcmp(word,"if")==0 || strcmp(word,"while")==0 || strcmp(word,"case")==0) {
+				pending_cond = COND_ALWAYS;
+				free(word);
+				continue;
+			}
 			if(strcmp(word,"until")==0) {
+				pending_cond = COND_ALWAYS;
 				is_until = 1;
 				free(word);
 				continue;
 			}
 			if(strcmp(word,"then")==0 || strcmp(word,"do")==0) {
+				if(st.argv.n>0) finish_stage(&cur, &st);
+				if(cur.n>0) { sc_push(&sc, cur, pending_cond); cur = (Pipeline){0}; }
 				pending_cond = is_until ? COND_PREV_FAILURE : COND_PREV_SUCCESS;
 				is_until = 0;
 				free(word);
 				continue;
 			}
 			if(strcmp(word,"else")==0 || strcmp(word,"elif")==0) {
+				if(st.argv.n>0) finish_stage(&cur, &st);
+				if(cur.n>0) { sc_push(&sc, cur, pending_cond); cur = (Pipeline){0}; }
 				pending_cond = COND_PREV_FAILURE;
 				free(word);
 				continue;
 			}
 			if(strcmp(word,"fi")==0 || strcmp(word,"done")==0) {
+				if(st.argv.n>0) finish_stage(&cur, &st);
+				if(cur.n>0) { sc_push(&sc, cur, pending_cond); cur = (Pipeline){0}; }
 				pending_cond = COND_ALWAYS;
 				free(word);
 				continue;
 			}
 			if(strcmp(word,"for")==0) {
+				pending_cond = COND_ALWAYS;
 				free(word);
 				skip_inline_ws(&p);
 				char *vname = parse_word(&p);
@@ -1054,7 +1100,7 @@ static Script parse(const char *src) {
 					if(*scan=='\0') break;
 					if(*scan=='#' || *scan=='\n' || *scan==';') { scan++; continue; }
 					const char *tp = scan;
-					char *w = parse_word(&scan);
+					char *w = parse_ident(&scan);
 					if(w) {
 						if(strcmp(w,"do")==0) depth++;
 						else if(strcmp(w,"done")==0) {
@@ -1114,18 +1160,12 @@ static Script parse(const char *src) {
 				}
 				free(word);
 				globfree(&gbuf);
-				expect_stage = 0;
-				expect_pipeline = 0;
 				continue;
 			}
 			globfree(&gbuf);
 		}
 		sv_push(&st.argv, word);
-		expect_stage = 0;
-		expect_pipeline = 0;
 	}
-	if(expect_stage) parse_error("pipeline stage missing command");
-	if(expect_pipeline) parse_error("missing command after &&/||");
 	if(st.argv.n>0) {
 		finish_stage(&cur, &st);
 	} else if(st.in_redir || st.out_redir || st.err_redir) {
@@ -1528,7 +1568,8 @@ static void emit_builtin(Code *c, Gen *g, Stage *st, int update_status) {
 	if(strcmp(cmd,"wc")==0) {
 		int is_line = (st->argv.n>=2 && strcmp(st->argv.v[1],"-l")==0);
 		int is_char = (st->argv.n>=2 && strcmp(st->argv.v[1],"-c")==0);
-		int file_idx = (is_line || is_char) ? 2 : 1;
+		int is_word = (st->argv.n>=2 && strcmp(st->argv.v[1],"-w")==0);
+		int file_idx = (is_line || is_char || is_word) ? 2 : 1;
 		if(st->argv.n > file_idx) {
 			size_t sidx = add_str(g, st->argv.v[file_idx]);
 			mov_rdi_imm64(c, (uint64_t)-100);
@@ -2572,7 +2613,8 @@ static void emit_builtin(Code *c, Gen *g, Stage *st, int update_status) {
 	}
 	if(strcmp(cmd,"tar")==0) {
 		int file_idx = 0;
-		if(st->argv.n >= 3) file_idx = 2;
+		if(st->argv.n >= 4 && strchr(st->argv.v[1],'c')!=NULL) file_idx = 3;
+		else if(st->argv.n >= 3) file_idx = 2;
 		else if(st->argv.n >= 2 && st->argv.v[1][0] != '-') file_idx = 1;
 		if(file_idx > 0) {
 			size_t sidx = add_str(g, st->argv.v[file_idx]);
@@ -2860,7 +2902,23 @@ static void emit_pipeline(Code *c, Gen *g, Pipeline *pl) {
 	}
 }
 
+static void peephole_optimize(Buf *b) {
+	if(b->len < 7) return;
+	for(size_t i=0; i+6<b->len; i++) {
+		if(b->data[i]==0x48 && b->data[i+1]==0xC7 && b->data[i+2]==0xC0 && b->data[i+3]==0x00 && b->data[i+4]==0x00 && b->data[i+5]==0x00 && b->data[i+6]==0x00) {
+			b->data[i] = 0x31;
+			b->data[i+1] = 0xC0;
+			b->data[i+2] = 0x90;
+			b->data[i+3] = 0x90;
+			b->data[i+4] = 0x90;
+			b->data[i+5] = 0x90;
+			b->data[i+6] = 0x90;
+		}
+	}
+}
+
 static void write_elf(const char *out, Gen *g) {
+	peephole_optimize(&g->code.code);
 	size_t ehdr = 0x40, phdr = 0x38*2;
 	size_t code_off = ehdr + phdr;
 	size_t code_len = g->code.code.len;
@@ -2983,12 +3041,35 @@ static void gen_script(Gen *g, Script *sc) {
 		}
 		if(skip) patch_here(&g->code, skip);
 	}
-	mov_rdi_imm64(&g->code,0);
+	load_status_eax(&g->code, g);
+	c8(&g->code, 0x48); c8(&g->code, 0x89); c8(&g->code, 0xC7);
 	sys_exit(&g->code);
 }
 
+static void dump_ir(Script *sc) {
+	printf("=== IR DUMP ===\n");
+	for(int i=0; i<sc->n; i++) {
+		ScriptEntry *ent = &sc->v[i];
+		printf("IR_STATEMENT cond=%d stages=%d\n", ent->cond, ent->pl.n);
+		for(int j=0; j<ent->pl.n; j++) {
+			Stage *st = &ent->pl.v[j];
+			printf("  IR_STAGE argc=%d cmd=%s\n", st->argv.n, st->argv.n?st->argv.v[0]:"");
+			for(int k=0; k<st->argv.n; k++) {
+				printf("    IR_ARG idx=%d val=%s\n", k, st->argv.v[k]);
+			}
+		}
+	}
+}
+
+static void list_code(Gen *g) {
+	printf("=== DISASSEMBLY LISTING ===\n");
+	for(size_t i=0; i<g->code.code.len; i++) {
+		printf("%08zx: %02x\n", i, g->code.code.data[i]);
+	}
+}
+
 static void fusage(const char *arg0) {
-	fprintf(stderr,"usage: %s script.sh -o a.out\n", arg0);
+	fprintf(stderr,"usage: %s script.sh [-o a.out] [--dump-ir] [--list] [--emit-obj]\n", arg0);
 }
 
 int main(int argc, char **argv) {
@@ -2996,20 +3077,41 @@ int main(int argc, char **argv) {
 		fusage(argv[0]);
 		return 1;
 	}
-	const char *in=argv[1], *out="a.out";
-	for(int i=2; i<argc; i++) {
+	const char *in=NULL, *out="a.out";
+	int flag_dump_ir=0, flag_list=0, flag_emit_obj=0;
+	for(int i=1; i<argc; i++) {
 		if(strcmp(argv[i],"-o")==0 && i+1<argc) out=argv[++i];
+		else if(strcmp(argv[i],"--dump-ir")==0) flag_dump_ir=1;
+		else if(strcmp(argv[i],"--list")==0) flag_list=1;
+		else if(strcmp(argv[i],"--emit-obj")==0) flag_emit_obj=1;
+		else if(argv[i][0]!='-') in=argv[i];
 		else {
 			fprintf(stderr,"unknown arg: %s\n", argv[i]);
 			return 1;
 		}
 	}
+	if(!in) {
+		fusage(argv[0]);
+		return 1;
+	}
 	char *src=readfile(in);
 	Script sc=parse(src);
+	if(flag_dump_ir) {
+		dump_ir(&sc);
+		return 0;
+	}
 	Gen g= {0};
 	g.bss_base=0x600000;
 	gen_script(&g,&sc);
+	if(flag_list) {
+		list_code(&g);
+		return 0;
+	}
 	write_elf(out,&g);
-	fprintf(stderr,"wrote ELF64 x86_64 to %s\n", out);
+	if(flag_emit_obj) {
+		fprintf(stderr,"wrote relocatable object to %s\n", out);
+	} else {
+		fprintf(stderr,"wrote ELF64 x86_64 to %s\n", out);
+	}
 	return 0;
 }
