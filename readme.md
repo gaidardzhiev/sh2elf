@@ -1,17 +1,10 @@
 # sh2elf
 
-A compiler that turns shell scripts into standalone staticaly linked `ELF64` executables for `Linux` on the `x86_64` architecture. It translates shell command lines, functions, arithmetic, pipelines and control flow straight into native machine code and raw kernel system calls, embeds them in an `ELF` binary, and handles process control without relying on an external shell or interpreter.
+A compiler that turns shell scripts into standalone statically linked `ELF64` executables for `Linux` on the `x86_64` architecture. It translates shell command lines, functions, arithmetic, pipelines and control flow straight into native machine code and raw kernel system calls, embeds them in an `ELF` binary, and handles process control without relying on an external shell or interpreter.
 
-## Why sh2elf?
-
-Interpreted shell scripts are slow because they parse text at runtime, fork subprocesses constantly, and evaluate parameters over and over.
-
-sh2elf compiles shell code into native x86_64 binaries.
-
-* **11.28x faster execution** than interpreted bash.
-* **Zero dependencies**: runs directly on top of the Linux kernel ABI.
-* **Standalone binaries**: ship single ELF executables without needing bash, zsh, or dash installed.
-* **Complete POSIX coverage**: variables, functions, process substitution, arithmetic, signal handling, and redirections.
+## How it works
+ 
+The POSIX shell is not a fast language. Every invocation parses text, forks subprocesses to evaluate command substitutions, and interprets variable expansions at runtime. sh2elf compiles a shell script once and produces a native ELF64 binary that the Linux kernel can execute directly. All control flow becomes native branches. All I/O goes through inline system call sequences. Variable state lives in a BSS hashtable. Pipelines are implemented with `fork`, `pipe`, and `dup2` at the call site, emitted as machine code. The result runs 11.28x faster than bash on a comprehensive benchmark exercising the full supported language, carries no shared library dependencies, and communicates with the kernel exclusively through raw Linux system calls.
 
 ## Quick Start
 
@@ -222,6 +215,16 @@ This verifies:
 1. `verify.sh`: 89 / 89 integration tests pass (100%).
 2. `test_diff`: Differential test harness matches bash output byte-for-byte.
 3. `fuzz_sh`: 100 / 100 random fuzzing iterations pass without errors.
+
+## Paper
+
+A formal treatment of the compiler architecture, memory model, pipeline semantics, and code generation is available in [`docs/sh2elf-paper.pdf`](./docs/sh2elf-paper.pdf). To rebuild the PDF from the LaTeX source, run:
+
+```sh
+sh docs/tex2pdf.sh docs/sh2elf-paper.tex
+```
+
+Requires `pdflatex` or `xelatex`. The script prompts which one to use, runs two passes for cross references, and copies the result to `~/Downloads`.
 
 ## License
 

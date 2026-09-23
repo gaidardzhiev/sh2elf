@@ -1,0 +1,479 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[top=1in,bottom=1in,left=0.85in,right=0.85in,columnsep=0.35in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{times}
+\usepackage{setspace}
+\usepackage{flushend}
+
+\setlength{\parskip}{3pt plus 1pt minus 1pt}
+\setlength{\parindent}{1em}
+\titleformat{\section}
+  {\normalsize\bfseries\scshape}{}{0em}{}
+\titlespacing*{\section}{0pt}{2.2ex plus 0.6ex minus 0.3ex}{0.5ex plus 0.1ex}
+\titleformat{\subsection}
+  {\normalsize\itshape}{}{0em}{}
+\titlespacing*{\subsection}{0pt}{1.4ex plus 0.4ex minus 0.2ex}{0.3ex}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[C]{\small\textit{sh2elf: Compiling POSIX Shell to Native x86-64}}
+\fancyfoot[C]{\small\thepage}
+
+\fancypagestyle{firstpage}{%
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \fancyfoot[C]{\small\thepage}
+}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=none,
+  aboveskip=3pt,
+  belowskip=3pt,
+}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=black,
+  citecolor=black,
+  pdftitle={sh2elf: Compiling POSIX Shell Scripts to Native x86-64 ELF Binaries},
+  pdfauthor={Ivan Gaydardzhiev},
+}
+
+\begin{document}
+
+\thispagestyle{firstpage}
+
+\twocolumn[{%
+\vspace*{10pt}
+\begin{center}
+  {\LARGE\bfseries sh2elf: Compiling POSIX Shell Scripts\\[5pt]
+  to Native x86-64 ELF Binaries}\\[12pt]
+  {\large Ivan Gaydardzhiev}\\[3pt]
+  {\normalsize\itshape Independent Research}\\[10pt]
+  {\small This work is licensed under the Creative Commons
+  Attribution 4.0 International License (CC~BY~4.0).}\\[18pt]
+\end{center}
+
+\begin{center}
+\begin{minipage}{0.82\textwidth}
+\small\noindent\textbf{Abstract.}\enspace
+sh2elf is a single-pass compiler that translates POSIX shell scripts
+into statically linked ELF64 executables for Linux on x86-64. It
+handles the full shell language subset including pipelines, control
+flow, parameter expansion, arithmetic, signal handling, and a large
+set of built-in commands, all without invoking an external shell at
+runtime. The compiler is written in C, totals roughly 3100 lines, and
+produces binaries that execute 11.28~times faster than the equivalent
+bash script on a comprehensive benchmark exercising the entire
+supported language. The output binary carries no shared library
+dependencies and communicates with the kernel exclusively through raw
+Linux system calls.
+\end{minipage}
+\end{center}
+\vspace{18pt}
+}]
+
+
+\section{Introduction}
+
+The POSIX shell is not a fast language. Every invocation parses text,
+forks subprocesses to evaluate command substitutions, and interprets
+variable expansions at runtime. For scripts that run on hot paths or
+that are shipped as part of a distribution's init or package
+infrastructure, this overhead is constant and unavoidable. Attempts to
+speed up shell execution have historically fallen into two categories:
+faster interpreters such as dash, and transpilation to another
+interpreted language such as Python or Perl. Neither approach
+eliminates the interpreter from the execution path.
+
+sh2elf takes a different position. Given a shell script, it compiles
+it once and produces a native ELF64 binary that the Linux kernel can
+execute directly. The resulting program contains no interpreter, no
+shared libraries, and no calls back into the shell. All control flow
+is native branches. All I/O goes through inline system call sequences.
+Variable state lives in a BSS hashtable. Pipelines are implemented
+with \texttt{fork}, \texttt{pipe}, and \texttt{dup2} at the call site,
+emitted as machine code.
+
+The practical consequence is a binary that runs an order of magnitude
+faster than bash on identical workloads and that can be copied to any
+x86-64 Linux system and executed without any runtime dependencies.
+
+
+\section{Compiler Architecture}
+
+The compiler is structured as a front end, an intermediate
+representation, a code generator, and an ELF writer. All four stages
+are contained in \texttt{sh2elf.c}, a single C source file. There are
+no external parser generators, no LLVM passes, and no linking to a C
+runtime.
+
+\subsection{Front end and IR}
+
+The front end reads a shell script and produces a flat array of IR
+statements. Each IR statement holds a condition field indicating
+whether it participates in a \texttt{\&\&} or \texttt{||} chain, and a
+pipeline field that lists the stages of the pipeline as argument
+vectors. This is a three-address representation in spirit: the front
+end resolves variable references and quoting rules into slot indices
+rather than keeping raw text around, though for dynamic values the
+full resolution is deferred to runtime code sequences.
+
+The IR layer decouples parsing from code generation cleanly enough
+that the compiler can also emit a textual dump of the IR for
+inspection, and can produce a source-annotated disassembly listing
+that maps each shell line to the x86-64 instructions it generated.
+
+\subsection{Code generator}
+
+The code generator walks the IR and emits x86-64 machine code
+directly into a growable byte buffer. There is no assembler text
+involved at any stage. Each instruction is written byte by byte using
+small helper functions that encode register-immediate and
+register-register forms.
+
+For built-in commands, the generator emits inline system call
+sequences. A \texttt{pwd} statement becomes a
+\texttt{mov~rdi} / \texttt{mov~rsi} / \texttt{mov~rax,~79} /
+\texttt{syscall} sequence. A \texttt{printf} with a known string
+argument becomes a \texttt{write} syscall with the string address
+patched in from the string pool. For external commands, the generator
+emits a \texttt{fork}/\texttt{execve} pair at the call site. The
+compiler selects the full path from a fixed list of prefixes at
+compile time, so the runtime does not search \texttt{PATH}.
+
+Arithmetic expansion is handled by a 64-bit recursive descent integer
+evaluator that emits x86-64 arithmetic instructions directly. The
+expression \texttt{\$(( A * B + C ))} compiles to a small sequence of
+\texttt{mov}, \texttt{imul}, and \texttt{add} instructions operating
+on \texttt{rax}.
+
+\subsection{String pool}
+
+All string literals are collected into a \texttt{StrPool} at compile
+time. The pool uses linear search for deduplication: before adding a
+string it scans for an existing match, and duplicate strings are not
+emitted. The pool is placed in the binary in a read-only segment, and
+the code generator emits relocations that the ELF writer resolves
+before writing the file.
+
+\subsection{ELF writer}
+
+The ELF writer constructs the output binary entirely in memory and
+writes it in a single call. It builds an ELF64 header with two program
+headers: one \texttt{PT\_LOAD} segment covering the text and
+read-only data at virtual address \texttt{0x400000} with read and
+execute permissions, and one \texttt{PT\_LOAD} segment covering the
+BSS at \texttt{0x600000} with read and write permissions. The entry
+point is set to the first generated instruction, which immediately
+follows the ELF and program headers in the file.
+
+Before writing, the ELF writer runs the peephole optimizer on the
+code buffer. The optimizer replaces \texttt{mov~rax,~0} with
+\texttt{xor~eax,~eax} and removes unconditional jumps that target the
+following instruction. It then patches all pending relocations,
+filling in the absolute virtual addresses for string pool entries that
+the code generator left as placeholders.
+
+
+\section{Memory Model}
+
+The generated binary uses three memory regions. The text segment holds
+executable code beginning at \texttt{0x400000}. Immediately following
+the code in the same segment is the read-only string pool. The BSS
+segment begins at \texttt{0x600000} and holds all mutable state.
+
+The BSS layout is fixed across all generated binaries. Offset~0 holds
+the exit status register, an 8-byte slot that every command updates
+with its return code. Offset~8 holds the positional parameter frame:
+slots for \texttt{\$0} through \texttt{\$9}, plus \texttt{\$\#},
+\texttt{\$@}, and \texttt{\$*}. These are populated by the binary
+prologue, which reads \texttt{argc} and \texttt{argv} from the Linux
+initial stack before executing any shell statements.
+
+Offset~256 begins the variable hashtable, which uses open addressing
+with linear probing. Each slot holds a key pointer and a value
+pointer. Variable lookup and assignment are emitted as inline code
+sequences that hash the key string, probe the table, and read or write
+the value pointer without any function call overhead, since the table
+address is a compile-time constant.
+
+Offset~4352 is the I/O scratch buffer, a 64~KB region used by
+streaming built-in commands for their \texttt{read} and \texttt{write}
+syscall loops.
+
+
+\section{Pipeline Implementation}
+
+Pipelines are compiled into a sequence of \texttt{pipe},
+\texttt{fork}, \texttt{dup2}, \texttt{close}, and \texttt{wait4}
+system calls emitted inline at the point where the pipeline appears in
+the source. For a two-stage pipeline \texttt{A~|~B}, the generated
+code calls \texttt{sys\_pipe} to create a file descriptor pair, forks
+a child for \texttt{A} that redirects its stdout to the write end of
+the pipe, and forks a child for \texttt{B} that redirects its stdin to
+the read end. The parent closes both ends and waits for both children.
+The exit status of the pipeline is taken from the last stage and
+stored into the BSS status register.
+
+Pipelines of arbitrary length are supported. Each additional stage
+introduces one more \texttt{fork}/\texttt{dup2}/\texttt{close} block,
+and the parent accumulates \texttt{wait4} calls for all children,
+discarding all statuses except the last.
+
+\texttt{SIGPIPE} handling is set up by a \texttt{sys\_rt\_sigaction}
+call in the binary prologue with \texttt{SIG\_DFL}, restoring default
+signal disposition for pipeline stages that may receive a broken pipe.
+
+
+\section{Variable Handling}
+
+Variables are dynamic at runtime. The compiler cannot statically
+determine all variable names or their lifetimes in the general case
+because of \texttt{eval} and because variables may be set by external
+commands through environment inheritance. The BSS hashtable
+accommodates this: any variable name encountered at runtime is hashed
+and stored as a key-value pair of \texttt{char*} pointers.
+
+For variables whose names and values are known at compile time, the
+compiler can sometimes emit the value directly as a string pool
+reference and bypass the hashtable entirely. This applies to simple
+cases where no variable is involved, and to arithmetic expressions
+where both operands are numeric literals.
+
+Parameter expansions are emitted as inline runtime routines. The
+expansion \texttt{\$\{VAR\#\#pat\}} compiles to a sequence that scans
+the value of \texttt{VAR} from left to right evaluating
+\texttt{fnmatch} at each offset, takes the longest prefix that matches
+\texttt{pat}, and returns the remaining suffix. The expansion
+\texttt{\$\{VAR/pat/rep\}} performs substitution rather than stripping
+by the same mechanism. All these operations work directly on string
+data in the BSS scratch buffer.
+
+
+\section{Control Flow}
+
+Control flow constructs compile to native branch sequences with
+forward or backward jumps patched after the target address is known.
+
+An \texttt{if} statement compiles to: evaluate the condition pipeline,
+load the status from the BSS status register, compare against zero,
+and branch forward over the then-body if non-zero. The else branch, if
+present, is prefixed by an unconditional jump over it from the end of
+the then-body. Patch addresses are recorded on a compile-time stack
+and filled in once the target offset is known.
+
+\texttt{while} and \texttt{until} loops record the loop top address
+before emitting the condition, emit the condition, branch past the
+loop body on failure (or success for \texttt{until}), emit the body,
+and emit an unconditional backward jump to the loop top. \texttt{break
+N} and \texttt{continue N} are implemented with a backpatching stack
+that records patch sites for each nesting level.
+
+\texttt{case} statements compile to a chain of \texttt{fnmatch}
+evaluations. Each pattern compiles to a test-and-branch sequence. On a
+match the compiler emits the corresponding body followed by an
+unconditional jump to the end of the entire \texttt{case} block.
+
+
+\section{Built-in Commands}
+
+sh2elf implements a large set of shell built-in commands as inline
+code rather than external binaries, using raw system calls without any
+C standard library involvement. This is the second main source of the
+compiler's performance advantage: where bash forks a subprocess to run
+\texttt{grep} or \texttt{sort}, sh2elf emits an inline loop of
+\texttt{read}/\texttt{write} syscalls that processes the stream
+without forking.
+
+The streaming built-ins, including \texttt{grep}, \texttt{sort},
+\texttt{uniq}, \texttt{cut}, \texttt{tr}, \texttt{head}, \texttt{tail},
+\texttt{sed}, \texttt{awk}, \texttt{find}, \texttt{ls}, \texttt{ps},
+\texttt{tar}, \texttt{gzip}, and \texttt{gunzip}, read from stdin
+through the BSS I/O buffer and write to stdout through the same
+buffer. The 64~KB buffer size matches typical kernel pipe buffer sizes
+and keeps memory pressure low.
+
+File-manipulation built-ins such as \texttt{cp}, \texttt{mv},
+\texttt{rm}, \texttt{mkdir}, \texttt{rmdir}, \texttt{touch},
+\texttt{chmod}, \texttt{chown}, and \texttt{chgrp} are compiled to the
+corresponding syscalls directly. Process-related built-ins including
+\texttt{kill}, \texttt{killall}, \texttt{pgrep}, \texttt{pkill},
+\texttt{ps}, and \texttt{nice} operate by scanning \texttt{/proc}
+through \texttt{sys\_getdents64} syscalls, matching process names
+against the argument, and issuing \texttt{sys\_kill} on matching PIDs.
+
+The \texttt{eval} built-in is implemented as a runtime compilation
+step. The argument string is assembled, written to a temporary file,
+and the compiler is reinvoked on that file. This makes \texttt{eval}
+correct but not fast; a script that calls it in a hot loop will not
+benefit from compilation.
+
+
+\section{Tooling}
+
+The compiler binary provides several operating modes beyond basic
+compilation. The \texttt{{-}{-}list} mode emits a source-annotated
+listing that pairs each shell source line with the x86-64 instructions
+it generated, useful for verifying code generation correctness. The
+\texttt{{-}{-}dump-ir} mode prints the three-address IR before code
+generation, showing each statement's condition flag and pipeline
+argument vectors. The \texttt{{-}{-}emit-obj} mode produces a
+relocatable ELF \texttt{.o} object file that can be linked into a C
+program, allowing shell logic compiled by sh2elf to be called from C.
+
+A language server, \texttt{sh2elf-lsp}, implements a subset of the
+Language Server Protocol and provides real-time parse error reporting
+with line and column positions, and hover information for built-in
+commands.
+
+A differential test harness, \texttt{test\_diff}, compiles each test
+script with sh2elf and runs both the compiled binary and bash on the
+same input, comparing stdout and exit status byte-for-byte. The test
+suite covers 89 integration tests across the full language subset, all
+of which pass. A grammar-based fuzzer, \texttt{fuzz\_sh}, generates
+random but syntactically valid shell scripts and runs them through the
+compiler and code generator; 100 iterations completed without
+triggering a crash or assertion failure.
+
+
+\section{Performance}
+
+The benchmark runs a 130-line shell script that exercises every
+supported language construct: variables, arithmetic, control flow,
+pipelines, parameter expansions, string operations, file manipulation,
+and built-in commands. The script is run 50 times for each executor.
+
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lrrr}
+\toprule
+Executor & Total (50 runs) & Per run & Speedup \\
+\midrule
+bash     & 3.668\,s & 73.3\,ms & 1.0$\times$ \\
+sh2elf   & 0.325\,s &  6.5\,ms & \textbf{11.28$\times$} \\
+\bottomrule
+\end{tabular}
+\caption{Execution time on a comprehensive POSIX benchmark.}
+\end{table}
+
+The speedup comes from two sources. First, sh2elf eliminates
+interpreter startup and text parsing on every run. Second, built-in
+commands that bash implements by forking an external process are
+emitted as inline syscall loops in the sh2elf binary, removing the
+\texttt{fork}/\texttt{exec}/\texttt{wait} overhead for each
+invocation.
+
+
+\section{Formal Semantics}
+
+The compilation function $\mathcal{C}$ maps a shell script to an ELF64
+binary represented as a tuple
+$\langle \text{Code},\, \text{StrPool},\, \text{Relocations},\,
+\text{BSS} \rangle$.
+
+For simple built-in commands with statically known arguments,
+compilation is fully determined at compile time. The command
+\texttt{printf~s} compiles to the sequence:
+\begin{align*}
+\mathcal{C}\llbracket \texttt{printf~}s \rrbracket \;=\;\;
+  &\texttt{mov~rdi,\,1} \\
+  &\texttt{mov~rsi,\,Addr}(s) \\
+  &\texttt{mov~rdx,\,Len}(s) \\
+  &\texttt{mov~rax,\,1} \\
+  &\texttt{syscall}
+\end{align*}
+
+A two-stage pipeline $C_1 \mid C_2$ compiles to a fixed sequence:
+\texttt{sys\_pipe} creates the descriptor pair; a first
+\texttt{sys\_fork} produces a child that calls
+$\texttt{sys\_dup2}(fd_1, 1)$, closes $fd_0$, and executes $C_1$; a
+second \texttt{sys\_fork} produces a child that calls
+$\texttt{sys\_dup2}(fd_0, 0)$, closes $fd_1$, and executes $C_2$; the
+parent closes both descriptors, issues \texttt{sys\_wait4} for both
+children, and stores the status of $C_2$ into $\mathrm{BSS}[0]$.
+
+Short-circuit operators compile to conditional branches on the BSS
+status register. The \texttt{\&\&} operator compiles as follows:
+emit $\mathcal{C}\llbracket P_1 \rrbracket$, then
+\texttt{cmp~[BSS\textsubscript{0}],\,0}, then
+\texttt{jne~}$L_\text{skip}$, then
+$\mathcal{C}\llbracket P_2 \rrbracket$, then place $L_\text{skip}$.
+The \texttt{||} operator is symmetric with \texttt{je} in place of
+\texttt{jne}.
+
+Parameter stripping expansions of the form \texttt{\$\{VAR\#\#pat\}}
+evaluate $\texttt{fnmatch}(pat,\, S[0..k])$ for $k = 1,\ldots,|S|$
+and return the suffix after the longest matching prefix. Suffix
+stripping \texttt{\$\{VAR\%\%pat\}} mirrors this from the right.
+Dynamic substitution \texttt{\$\{VAR//pat/rep\}} scans the buffer and
+replaces every non-overlapping match of \texttt{pat} with \texttt{rep}.
+
+
+\section{Limitations}
+
+sh2elf targets a well-defined subset of POSIX shell. Constructs outside
+that subset are rejected with a parse error at compile time rather
+than silently miscompiled. The source language deliberately excludes
+features that cannot be compiled efficiently or that require a runtime
+interpreter: dynamic \texttt{source} of unknown files, co-processes,
+job control signals, and interactive features such as readline history
+are not supported.
+
+The \texttt{eval} built-in is an exception. Because its argument is an
+arbitrary string assembled at runtime, it requires a runtime
+compilation step, making it correct but not fast.
+
+The output binary carries no dynamic relocation information. The fixed
+virtual addresses are suitable for statically linked executables where
+no dynamic linker is involved, which is exactly the use case sh2elf
+targets.
+
+
+\section{Conclusion}
+
+sh2elf demonstrates that the semantic gap between POSIX shell and
+native machine code is smaller than it might appear. The core shell
+execution model, pipelines, redirections, variable expansion, and
+control flow, maps directly to sequences of Linux system calls and
+x86-64 branch instructions. A compiler that performs this translation
+statically removes the interpreter overhead entirely and produces
+binaries that run at speeds appropriate for systems software rather
+than scripting.
+
+The compiler is self-contained, requiring no external tools beyond a C
+compiler to build. All built-in command implementations use raw system
+calls. The resulting binaries have no shared library dependencies and
+no runtime requirements beyond the Linux kernel ABI. For shell scripts
+that need to be fast, distributable as single files, or embedded in
+environments where a shell may not be present, sh2elf provides a
+practical compilation path.
+
+\bigskip
+\noindent\rule{\columnwidth}{0.4pt}
+\smallskip
+
+\noindent{\small
+The source code for sh2elf is available under the GNU General Public
+License version~3.
+Copyright \copyright\ 2025--2026 Ivan Gaydardzhiev.
+This paper is licensed under CC~BY~4.0.}
+
+\end{document}
