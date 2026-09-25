@@ -1228,11 +1228,126 @@ fhuge() {
 	}
 }
 
-{ fhello && fpipe && flogic && ftruefalse && fpwd && fstderr && fmkdir && frmdir && funlink && fsleep && ftestcmd && fexport && fcat && fhead && fwc && fkill && ftouch && fchmod && fbasename && fvars && fdirname && fprintf && fsubshell && fgroup && fif && fwhile && ffor && funtil && fread && funset && fcp && fmv && frm && ftee && fexpr && fparamexp && fcase && fheredoc && fcmdsub && farith && fglob && ffunc && funame && fwhoami && fid && fenv && flscmd && fgrep && ftr && fcut && fsort && funiq && ffind && fxargs && fsed && fawk && ftail && fchown && fchgrp && fgrepi && fgrepv && fgrepn && fgrepc && fheadn && ftailn && fcutdf && fsortr && fsortu && funiqc && funiqd && fwcl && fwcw && ffindname && fps && fkillall && fpgrep && fpkill && fnice && ftime && ftar && fgzip && fgunzip && fexprops && fpatternexp && fgetopts && feval && fshift && fpathexec && fhuge; RETURN="${?}"; } || exit 1
+fcompound_operands() {
+	./sh2elf scripts/test_compound_operands.sh -o compound_operands.elf >/dev/null
+	./compound_operands.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Compound Operands" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Compound Operands" "${R}FAILED${N}";
+		return 1;
+	}
+}
+
+floop_control() {
+	./sh2elf scripts/test_loop_control.sh -o loop_control.elf >/dev/null
+	./loop_control.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Loop Control" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Loop Control" "${R}FAILED${N}";
+		return 2;
+	}
+}
+
+ftrap_signals() {
+	./sh2elf scripts/test_trap_signals.sh -o trap_signals.elf >/dev/null
+	./trap_signals.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Trap Signals" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Trap Signals" "${R}FAILED${N}";
+		return 4;
+	}
+}
+
+ffunc_return() {
+	./sh2elf scripts/test_func_return.sh -o func_return.elf >/dev/null
+	./func_return.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Func Return" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Func Return" "${R}FAILED${N}";
+		return 8;
+	}
+}
+
+fset_flags() {
+	./sh2elf scripts/test_set_flags.sh -o set_flags.elf >/dev/null
+	./set_flags.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Set Flags" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Set Flags" "${R}FAILED${N}";
+		return 16;
+	}
+}
+
+fparam_assign_alt() {
+	./sh2elf scripts/test_param_assign_alt.sh -o param_assign_alt.elf >/dev/null
+	./param_assign_alt.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Param Assign Alt" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Param Assign Alt" "${R}FAILED${N}";
+		return 32;
+	}
+}
+
+ffd_redirs() {
+	./sh2elf scripts/test_fd_redirs.sh -o fd_redirs.elf >/dev/null
+	./fd_redirs.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "FD Redirections" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "FD Redirections" "${R}FAILED${N}";
+		return 64;
+	}
+}
+
+fselect_loop() {
+	./sh2elf scripts/test_select_loop.sh -o select_loop.elf >/dev/null
+	./select_loop.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Select Loop" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Select Loop" "${R}FAILED${N}";
+		return 128;
+	}
+}
+
+fproc_sub() {
+	./sh2elf scripts/test_proc_sub.sh -o proc_sub.elf >/dev/null
+	./proc_sub.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "Process Substitution" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Process Substitution" "${R}FAILED${N}";
+		return 256;
+	}
+}
+
+fifs_splitting() {
+	./sh2elf scripts/test_ifs_splitting.sh -o ifs_splitting.elf >/dev/null
+	./ifs_splitting.elf >/dev/null
+	[ $? -eq 0 ] && {
+		fprint "IFS Splitting" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "IFS Splitting" "${R}FAILED${N}";
+		return 512;
+	}
+}
+
+{ fhello && fpipe && flogic && ftruefalse && fpwd && fstderr && fmkdir && frmdir && funlink && fsleep && ftestcmd && fexport && fcat && fhead && fwc && fkill && ftouch && fchmod && fbasename && fvars && fdirname && fprintf && fsubshell && fgroup && fif && fwhile && ffor && funtil && fread && funset && fcp && fmv && frm && ftee && fexpr && fparamexp && fcase && fheredoc && fcmdsub && farith && fglob && ffunc && funame && fwhoami && fid && fenv && flscmd && fgrep && ftr && fcut && fsort && funiq && ffind && fxargs && fsed && fawk && ftail && fchown && fchgrp && fgrepi && fgrepv && fgrepn && fgrepc && fheadn && ftailn && fcutdf && fsortr && fsortu && funiqc && funiqd && fwcl && fwcw && ffindname && fps && fkillall && fpgrep && fpkill && fnice && ftime && ftar && fgzip && fgunzip && fexprops && fpatternexp && fgetopts && feval && fshift && fpathexec && fhuge && fcompound_operands && floop_control && ftrap_signals && ffunc_return && fset_flags && fparam_assign_alt && ffd_redirs && fselect_loop && fproc_sub && fifs_splitting; RETURN="${?}"; } || exit 1
 
 [ "${RETURN}" -eq 0 ] 2>/dev/null || printf "%s\n" "${RETURN}"
-
-
-
-
-

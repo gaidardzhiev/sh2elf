@@ -527,8 +527,96 @@ static char *parse_word(const char **pp) {
 					int vi = 0;
 					if(*p=='{') {
 						p++;
-						while(*p && *p!='}' && vi < 127) vname[vi++] = *p++;
+						if(*p=='#' && p[1]!='}' && p[1]!='\0') {
+							p++;
+							while(*p && *p!='}' && vi < 127) vname[vi++] = *p++;
+							vname[vi] = '\0';
+							if(*p=='}') p++;
+							char *val = getenv(vname);
+							size_t vlen = val ? strlen(val) : 0;
+							char lbuf[32];
+							snprintf(lbuf, sizeof(lbuf), "%zu", vlen);
+							bput(&buf, lbuf, strlen(lbuf));
+							continue;
+						}
+						while(*p && *p!='}' && *p!=':' && *p!='-' && *p!='=' && *p!='+' && *p!='#' && *p!='%' && *p!='/' && vi < 127) vname[vi++] = *p++;
+						vname[vi] = '\0';
+						char op = '\0';
+						int is_double = 0;
+						if(*p==':') { p++; op = *p++; }
+						else if(*p=='-' || *p=='=' || *p=='+') op = *p++;
+						else if(*p=='#') { p++; op = '#'; if(*p=='#') { p++; is_double = 1; } }
+						else if(*p=='%') { p++; op = '%'; if(*p=='%') { p++; is_double = 1; } }
+						else if(*p=='/') { p++; op = '/'; if(*p=='/') { p++; is_double = 1; } }
+						char pat[128], rep[128];
+						int pi = 0, ri = 0;
+						if(op=='#' || op=='%') {
+							while(*p && *p!='}' && pi < 127) pat[pi++] = *p++;
+							pat[pi] = '\0';
+						} else if(op=='/') {
+							while(*p && *p!='}' && *p!='/' && pi < 127) pat[pi++] = *p++;
+							pat[pi] = '\0';
+							if(*p=='/') p++;
+							while(*p && *p!='}' && ri < 127) rep[ri++] = *p++;
+							rep[ri] = '\0';
+						} else if(op) {
+							while(*p && *p!='}' && pi < 127) pat[pi++] = *p++;
+							pat[pi] = '\0';
+						}
 						if(*p=='}') p++;
+						char *val = getenv(vname);
+						if(op=='#') {
+							if(val) {
+								size_t vlen = strlen(val);
+								size_t match_len = 0;
+								for(size_t k = (is_double ? vlen : 1); is_double ? (k > 0) : (k <= vlen); is_double ? k-- : k++) {
+									char saved = val[k];
+									val[k] = '\0';
+									if(fnmatch(pat, val, 0) == 0) { match_len = k; val[k] = saved; if(!is_double) break; }
+									val[k] = saved;
+								}
+								bput(&buf, val + match_len, vlen - match_len);
+							}
+						} else if(op=='%') {
+							if(val) {
+								size_t vlen = strlen(val);
+								size_t match_at = vlen;
+								for(size_t k = (is_double ? 0 : vlen - 1); is_double ? (k < vlen) : (k <= vlen); is_double ? k++ : k--) {
+									if(fnmatch(pat, val + k, 0) == 0) { match_at = k; if(!is_double) break; }
+									if(k == 0) break;
+								}
+								bput(&buf, val, match_at);
+							}
+						} else if(op=='/') {
+							if(val) {
+								size_t vlen = strlen(val), plen = strlen(pat);
+								if(plen == 0) {
+									bput(&buf, val, vlen);
+								} else {
+									size_t i = 0;
+									while(i < vlen) {
+										if(strncmp(val + i, pat, plen) == 0) {
+											bput(&buf, rep, strlen(rep));
+											i += plen;
+											if(!is_double) { bput(&buf, val + i, vlen - i); break; }
+										} else {
+											b8(&buf, (uint8_t)val[i++]);
+										}
+									}
+								}
+							}
+						} else if(op=='-') {
+							if(val && *val) bput(&buf, val, strlen(val));
+							else bput(&buf, pat, strlen(pat));
+						} else if(op=='=') {
+							if(!val || !*val) { setenv(vname, pat, 1); val = pat; }
+							bput(&buf, val, strlen(val));
+						} else if(op=='+') {
+							if(val && *val) bput(&buf, pat, strlen(pat));
+						} else {
+							if(val) bput(&buf, val, strlen(val));
+						}
+						continue;
 					} else {
 						while(*p && ((*p>='A' && *p<='Z') || (*p>='a' && *p<='z') || (*p>='0' && *p<='9') || *p=='_') && vi < 127) vname[vi++] = *p++;
 					}
@@ -566,6 +654,44 @@ static char *parse_word(const char **pp) {
 				while(nr > 0 && (cbuf[nr-1] == '\n' || cbuf[nr-1] == '\r')) cbuf[--nr] = '\0';
 				bput(&buf, cbuf, nr);
 				pclose(fp);
+			}
+			continue;
+		}
+		if((*p=='<' || *p=='>') && p[1]=='(') {
+			static int g_psub_cnt = 0;
+			g_psub_cnt++;
+			char ptype = *p;
+			p += 2;
+			char subcmd[256];
+			int ci = 0;
+			int depth = 1;
+			while(*p && ci < 255) {
+				if(*p=='(') depth++;
+				else if(*p==')') {
+					depth--;
+					if(depth==0) { p++; break; }
+				}
+				subcmd[ci++] = *p++;
+			}
+			subcmd[ci] = '\0';
+			char tfpath[128];
+			snprintf(tfpath, sizeof(tfpath), "/tmp/.sh2elf_psub_%d", g_psub_cnt);
+			if(ptype == '<') {
+				FILE *fp = popen(subcmd, "r");
+				if(fp) {
+					char cbuf[4096];
+					size_t nr = fread(cbuf, 1, sizeof(cbuf)-1, fp);
+					cbuf[nr] = '\0';
+					pclose(fp);
+					FILE *tf = fopen(tfpath, "wb");
+					if(tf) {
+						fwrite(cbuf, 1, nr, tf);
+						fclose(tf);
+					}
+				}
+				bput(&buf, tfpath, strlen(tfpath));
+			} else {
+				bput(&buf, tfpath, strlen(tfpath));
 			}
 			continue;
 		}
@@ -769,7 +895,6 @@ static Script parse(const char *src) {
 	const char *p = src;
 	int pending_cond = COND_ALWAYS;
 	int is_until = 0;
-	int expect_stage = 0, expect_pipeline = 0;
 	while(*p) {
 		skip_inline_ws(&p);
 		if(*p=='\0') break;
@@ -792,20 +917,18 @@ static Script parse(const char *src) {
 				cur = (Pipeline){0};
 				pending_cond = COND_ALWAYS;
 			}
-			expect_stage = 0;
 			while(*p=='\n' || *p==';') p++;
 			continue;
 		}
 		if(*p=='&') {
 			if(p[1]=='&') {
-				if(st.argv.n==0) parse_error("missing command before &&");
-				finish_stage(&cur, &st);
-				if(cur.n==0) parse_error("missing command before &&");
-				sc_push(&sc, cur, pending_cond);
-				cur = (Pipeline){0};
+				if(st.argv.n>0) finish_stage(&cur, &st);
+				if(cur.n>0) {
+					sc_push(&sc, cur, pending_cond);
+					cur = (Pipeline){0};
+				}
+				if(sc.n==0) parse_error("missing command before &&");
 				pending_cond = COND_PREV_SUCCESS;
-				expect_stage = 0;
-				expect_pipeline = 1;
 				p+=2;
 				continue;
 			}
@@ -813,24 +936,27 @@ static Script parse(const char *src) {
 		}
 		if(*p=='|') {
 			if(p[1]=='|') {
-				if(st.argv.n==0) parse_error("missing command before ||");
-				finish_stage(&cur, &st);
-				if(cur.n==0) parse_error("missing command before ||");
-				sc_push(&sc, cur, pending_cond);
-				cur = (Pipeline){0};
+				if(st.argv.n>0) finish_stage(&cur, &st);
+				if(cur.n>0) {
+					sc_push(&sc, cur, pending_cond);
+					cur = (Pipeline){0};
+				}
+				if(sc.n==0) parse_error("missing command before ||");
 				pending_cond = COND_PREV_FAILURE;
-				expect_stage = 0;
-				expect_pipeline = 1;
 				p+=2;
 				continue;
 			}
-			if(st.argv.n==0) parse_error("empty pipeline stage");
-			finish_stage(&cur, &st);
-			expect_stage = 1;
+			if(st.argv.n>0) {
+				finish_stage(&cur, &st);
+			} else if(cur.n==0 && sc.n>0) {
+				cur = sc.v[--sc.n].pl;
+			} else if(cur.n==0) {
+				parse_error("empty pipeline stage");
+			}
 			p++;
 			continue;
 		}
-		if((*p=='>' || *p=='<') || (*p=='2' && p[1]=='>')) {
+		if(((*p=='>' && p[1]!='(') || (*p=='<' && p[1]!='(')) || (*p=='2' && p[1]=='>')) {
 			int is_err = (*p=='2');
 			if(is_err) p++;
 			char op = *p++;
@@ -873,10 +999,28 @@ static Script parse(const char *src) {
 				append = 1;
 				p++;
 			}
+			char *target = NULL;
 			skip_inline_ws(&p);
-			if(*p=='\0' || *p=='\n' || *p=='|' || *p==';' || *p=='<' || *p=='>') parse_error("missing redirection target");
-			char *target = parse_word(&p);
-			if(!target) parse_error("missing redirection target");
+			if(*p=='&') {
+				p++;
+				if(*p=='-') {
+					p++;
+					target = strdup("&-");
+				} else if(*p>='0' && *p<='9') {
+					const char *tstart = p;
+					while(*p>='0' && *p<='9') p++;
+					size_t tlen = (size_t)(p - tstart);
+					target = (char*)malloc(tlen + 2);
+					target[0] = '&';
+					memcpy(target + 1, tstart, tlen);
+					target[tlen + 1] = '\0';
+				}
+			}
+			if(!target) {
+				if(*p=='\0' || *p=='\n' || *p=='|' || *p==';' || (*p=='<' && p[1]!='(') || (*p=='>' && p[1]!='(')) parse_error("missing redirection target");
+				target = parse_word(&p);
+				if(!target) parse_error("missing redirection target");
+			}
 			if(op=='<') {
 				if(st.in_redir) free(st.in_redir);
 				st.in_redir = target;
@@ -894,6 +1038,36 @@ static Script parse(const char *src) {
 		char *word = parse_word(&p);
 		if(!word) { p++; continue; }
 		if(st.argv.n==0) {
+			if(strcmp(word,"local")==0 || strcmp(word,"export")==0) {
+				sv_push(&st.argv, strdup(word));
+				skip_inline_ws(&p);
+				char *arg = parse_word(&p);
+				if(arg) {
+					char *eq = strchr(arg, '=');
+					if(eq) {
+						*eq = '\0';
+						setenv(arg, eq + 1, 1);
+						*eq = '=';
+					}
+					sv_push(&st.argv, arg);
+				}
+				free(word);
+				continue;
+			}
+			if(strcmp(word,"return")==0) {
+				sv_push(&st.argv, strdup(word));
+				skip_inline_ws(&p);
+				char *arg = parse_word(&p);
+				if(arg) {
+					sv_push(&st.argv, arg);
+				}
+				finish_stage(&cur, &st);
+				sc_push(&sc, cur, pending_cond);
+				cur = (Pipeline){0};
+				pending_cond = COND_ALWAYS;
+				free(word);
+				break;
+			}
 			int is_fn_call = 0;
 			for(int fi=0; fi<g_funcs.n; fi++) {
 				if(strcmp(word, g_funcs.v[fi].name)==0) {
@@ -1080,7 +1254,19 @@ static Script parse(const char *src) {
 						free(w);
 						break;
 					}
-					sv_push(&items, w);
+					char *ifs = getenv("IFS");
+					if(ifs && *ifs) {
+						char *wcopy = strdup(w);
+						char *tok = strtok(wcopy, ifs);
+						while(tok) {
+							sv_push(&items, strdup(tok));
+							tok = strtok(NULL, ifs);
+						}
+						free(wcopy);
+						free(w);
+					} else {
+						sv_push(&items, w);
+					}
 					p = tp;
 				}
 				while(*p==';' || *p=='\n' || *p==' ') p++;
@@ -1315,11 +1501,15 @@ static void load_status_eax(Code *c, Gen *g) {
 }
 
 static int is_builtin(const char *cmd) {
-	return (strcmp(cmd,"echo")==0) || (strcmp(cmd,"cd")==0) || (strcmp(cmd,"exit")==0) || (strcmp(cmd,"true")==0) || (strcmp(cmd,"false")==0) || (strcmp(cmd,"pwd")==0) || (strcmp(cmd,"mkdir")==0) || (strcmp(cmd,"rmdir")==0) || (strcmp(cmd,"unlink")==0) || (strcmp(cmd,"sleep")==0) || (strcmp(cmd,"test")==0) || (strcmp(cmd,"[")==0) || (strcmp(cmd,"export")==0) || (strcmp(cmd,"cat")==0) || (strcmp(cmd,"head")==0) || (strcmp(cmd,"wc")==0) || (strcmp(cmd,"kill")==0) || (strcmp(cmd,"touch")==0) || (strcmp(cmd,"chmod")==0) || (strcmp(cmd,"basename")==0) || (strcmp(cmd,"dirname")==0) || (strcmp(cmd,"printf")==0) || (strcmp(cmd,"shift")==0) || (strcmp(cmd,"read")==0) || (strcmp(cmd,"unset")==0) || (strcmp(cmd,"cp")==0) || (strcmp(cmd,"mv")==0) || (strcmp(cmd,"rm")==0) || (strcmp(cmd,"tee")==0) || (strcmp(cmd,"expr")==0) || (strcmp(cmd,"trap")==0) || (strcmp(cmd,"uname")==0) || (strcmp(cmd,"whoami")==0) || (strcmp(cmd,"id")==0) || (strcmp(cmd,"env")==0) || (strcmp(cmd,"ls")==0) || (strcmp(cmd,"grep")==0) || (strcmp(cmd,"tr")==0) || (strcmp(cmd,"cut")==0) || (strcmp(cmd,"sort")==0) || (strcmp(cmd,"uniq")==0) || (strcmp(cmd,"find")==0) || (strcmp(cmd,"xargs")==0) || (strcmp(cmd,"sed")==0) || (strcmp(cmd,"awk")==0) || (strcmp(cmd,"tail")==0) || (strcmp(cmd,"chown")==0) || (strcmp(cmd,"chgrp")==0) || (strcmp(cmd,"ps")==0) || (strcmp(cmd,"killall")==0) || (strcmp(cmd,"pgrep")==0) || (strcmp(cmd,"pkill")==0) || (strcmp(cmd,"nice")==0) || (strcmp(cmd,"time")==0) || (strcmp(cmd,"tar")==0) || (strcmp(cmd,"gzip")==0) || (strcmp(cmd,"gunzip")==0) || (strcmp(cmd,"getopts")==0) || (strcmp(cmd,"eval")==0) || (strcmp(cmd,"local")==0) || (strcmp(cmd,"return")==0);
+	return (strcmp(cmd,"echo")==0) || (strcmp(cmd,"cd")==0) || (strcmp(cmd,"exit")==0) || (strcmp(cmd,"true")==0) || (strcmp(cmd,"false")==0) || (strcmp(cmd,"pwd")==0) || (strcmp(cmd,"mkdir")==0) || (strcmp(cmd,"rmdir")==0) || (strcmp(cmd,"unlink")==0) || (strcmp(cmd,"sleep")==0) || (strcmp(cmd,"test")==0) || (strcmp(cmd,"[")==0) || (strcmp(cmd,"export")==0) || (strcmp(cmd,"cat")==0) || (strcmp(cmd,"head")==0) || (strcmp(cmd,"wc")==0) || (strcmp(cmd,"kill")==0) || (strcmp(cmd,"touch")==0) || (strcmp(cmd,"chmod")==0) || (strcmp(cmd,"basename")==0) || (strcmp(cmd,"dirname")==0) || (strcmp(cmd,"printf")==0) || (strcmp(cmd,"shift")==0) || (strcmp(cmd,"read")==0) || (strcmp(cmd,"unset")==0) || (strcmp(cmd,"cp")==0) || (strcmp(cmd,"mv")==0) || (strcmp(cmd,"rm")==0) || (strcmp(cmd,"tee")==0) || (strcmp(cmd,"expr")==0) || (strcmp(cmd,"trap")==0) || (strcmp(cmd,"uname")==0) || (strcmp(cmd,"whoami")==0) || (strcmp(cmd,"id")==0) || (strcmp(cmd,"env")==0) || (strcmp(cmd,"ls")==0) || (strcmp(cmd,"grep")==0) || (strcmp(cmd,"tr")==0) || (strcmp(cmd,"cut")==0) || (strcmp(cmd,"sort")==0) || (strcmp(cmd,"uniq")==0) || (strcmp(cmd,"find")==0) || (strcmp(cmd,"xargs")==0) || (strcmp(cmd,"sed")==0) || (strcmp(cmd,"awk")==0) || (strcmp(cmd,"tail")==0) || (strcmp(cmd,"chown")==0) || (strcmp(cmd,"chgrp")==0) || (strcmp(cmd,"ps")==0) || (strcmp(cmd,"killall")==0) || (strcmp(cmd,"pgrep")==0) || (strcmp(cmd,"pkill")==0) || (strcmp(cmd,"nice")==0) || (strcmp(cmd,"time")==0) || (strcmp(cmd,"tar")==0) || (strcmp(cmd,"gzip")==0) || (strcmp(cmd,"gunzip")==0) || (strcmp(cmd,"getopts")==0) || (strcmp(cmd,"eval")==0) || (strcmp(cmd,"local")==0) || (strcmp(cmd,"return")==0) || (strcmp(cmd,"break")==0) || (strcmp(cmd,"continue")==0) || (strcmp(cmd,"set")==0);
 }
 
 static void emit_builtin(Code *c, Gen *g, Stage *st, int update_status) {
 	const char *cmd = st->argv.v[0];
+	if(strcmp(cmd,"break")==0 || strcmp(cmd,"continue")==0 || strcmp(cmd,"set")==0) {
+		if(update_status) store_status_imm(c,g,0);
+		return;
+	}
 	if(strcmp(cmd,"echo")==0) {
 		for(int i=1; i<st->argv.n; i++) {
 			write_literal(c,g, st->argv.v[i]);
@@ -1810,15 +2000,23 @@ static void emit_builtin(Code *c, Gen *g, Stage *st, int update_status) {
 	if(strcmp(cmd,"test")==0 || strcmp(cmd,"[")==0) {
 		if(st->argv.n>=4 && (strcmp(st->argv.v[2],"=")==0 || strcmp(st->argv.v[2],"!=")==0)) {
 			int eq = (strcmp(st->argv.v[2],"=")==0);
-			int res = (strcmp(st->argv.v[1],st->argv.v[3])==0);
+			const char *v1 = st->argv.v[1];
+			const char *v2 = st->argv.v[3];
+			if(v1[0]=='$') { const char *e = getenv(v1+1); v1 = e ? e : ""; }
+			if(v2[0]=='$') { const char *e = getenv(v2+1); v2 = e ? e : ""; }
+			int res = (strcmp(v1, v2)==0);
 			int ok = (eq ? res : !res);
 			if(update_status) store_status_imm(c,g, ok ? 0 : 1);
 			return;
 		}
 		if(st->argv.n>=4 && (strcmp(st->argv.v[2],"-eq")==0 || strcmp(st->argv.v[2],"-ne")==0 || strcmp(st->argv.v[2],"-gt")==0 || strcmp(st->argv.v[2],"-ge")==0 || strcmp(st->argv.v[2],"-lt")==0 || strcmp(st->argv.v[2],"-le")==0)) {
-			long num1 = atol(st->argv.v[1]);
+			const char *v1 = st->argv.v[1];
+			const char *v2 = st->argv.v[3];
+			if(v1[0]=='$') { const char *e = getenv(v1+1); v1 = e ? e : "0"; }
+			if(v2[0]=='$') { const char *e = getenv(v2+1); v2 = e ? e : "0"; }
+			long num1 = atol(v1);
 			const char *op = st->argv.v[2];
-			long num2 = atol(st->argv.v[3]);
+			long num2 = atol(v2);
 			int ok = 0;
 			if(strcmp(op,"-eq")==0) ok = (num1 == num2);
 			else if(strcmp(op,"-ne")==0) ok = (num1 != num2);

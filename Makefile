@@ -20,9 +20,10 @@ fuzz_sh: fuzz_sh.c
 test: all
 	./verify.sh
 	./test_diff
+	./fuzz_sh 100
 
 fuzz: all
-	./fuzz_sh 100
+	./fuzz_sh 500
 
 strip:
 	strip -S \
