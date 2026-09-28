@@ -1,1 +1,1 @@
-chgrp 0 /tmp/sh2elf_chgrp.txt
+chgrp --reference=/tmp/sh2elf_chgrp.txt /tmp/sh2elf_chgrp.txt

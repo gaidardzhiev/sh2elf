@@ -1,1 +1,1 @@
-find /tmp -name *.txt
+find /tmp -maxdepth 1 -name '*.txt'

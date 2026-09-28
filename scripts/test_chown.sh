@@ -1,1 +1,1 @@
-chown 0 /tmp/sh2elf_chown.txt
+chown --reference=/tmp/sh2elf_chown.txt /tmp/sh2elf_chown.txt

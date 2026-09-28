@@ -1,1 +1,1 @@
-find /tmp
+find /tmp -maxdepth 0

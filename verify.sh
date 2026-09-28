@@ -3823,6 +3823,2233 @@ EOF
 	}
 }
 
-{ fhello && fpipe && flogic && ftruefalse && fpwd && fstderr && fmkdir && frmdir && funlink && fsleep && ftestcmd && fexport && fcat && fhead && fwc && fkill && ftouch && fchmod && fbasename && fvars && fdirname && fprintf && fsubshell && fgroup && fif && fwhile && ffor && funtil && fread && funset && fcp && fmv && frm && ftee && fexpr && fparamexp && fcase && fheredoc && fcmdsub && farith && fglob && ffunc && funame && fwhoami && fid && fenv && flscmd && fgrep && ftr && fcut && fsort && funiq && ffind && fxargs && fsed && fawk && ftail && fchown && fchgrp && fgrepi && fgrepv && fgrepn && fgrepc && fheadn && ftailn && fcutdf && fsortr && fsortu && funiqc && funiqd && fwcl && fwcw && ffindname && fps && fkillall && fpgrep && fpkill && fnice && ftime && ftar && fgzip && fgunzip && fexprops && fpatternexp && fgetopts && feval && fshift && fpathexec && fhuge && fcompound_operands && floop_control && ftrap_signals && ffunc_return && fset_flags && fparam_assign_alt && ffd_redirs && fselect_loop && fproc_sub && fifs_splitting && farith_full && farith_cmd && fwhile_loop && fbrace_exp && fparam_ext && fansi_quote && fherestring && fnegation && fbackground && fruntime_params && ffunc_args && fcase_alt && ftest_ext && fecho_opts && fdquote_exp && frev && fnl && ftac && ffold && fbase64 && fprintf_full && fxxd && fcmp && fcksum && fseq && fyes && ffactor && fhostname && fnproc && fprintenv && freadlink && fln && ftruncate && fhead_full && fbig_input && ftail_full && ftail_follow && fwc_full && fcut_posix && fcut_full && ftr_full && ftr_posix && funiq_full && fsort_full && fsort_posix && fgrep_full && fgrep_regex && fgrep_rec; RETURN="${?}"; } || exit 1
+fls_full() {
+	./sh2elf scripts/test_ls_full.sh -o ls_full.elf >/dev/null
+	CAPTURE=$(./ls_full.elf)
+	EXPECTED=$(cat <<'EOF'
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk
+run.sh
+x~
+.
+..
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+.hidden
+lnk
+run.sh
+x~
+.y~
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+.hidden
+lnk
+run.sh
+x~
+.y~
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk
+run.sh
+x~
+apple	    dir2	 file-1.2.9
+banana	    eggs.TXT	 lnk
+cherry.txt  emptyd	 run.sh
+dangling    fig10	 x~
+date.c	    fig9
+dir1	    file-1.2.10
+apple	    banana    cherry.txt
+dangling    date.c    dir1
+dir2	    eggs.TXT  emptyd
+fig10	    fig9      file-1.2.10
+file-1.2.9  lnk       run.sh
+x~
+apple, banana, cherry.txt, dangling,
+date.c, dir1, dir2, eggs.TXT, emptyd,
+fig10, fig9, file-1.2.10, file-1.2.9,
+lnk, run.sh, x~
+apple
+banana
+cherry.txt
+dangling@
+date.c
+dir1/
+dir2/
+eggs.TXT
+emptyd/
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk@
+run.sh*
+x~
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1/
+dir2/
+eggs.TXT
+emptyd/
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk
+run.sh
+x~
+apple
+banana
+cherry.txt
+dangling@
+date.c
+dir1/
+dir2/
+eggs.TXT
+emptyd/
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk@
+run.sh
+x~
+x~
+run.sh
+lnk
+file-1.2.9
+file-1.2.10
+fig9
+fig10
+emptyd
+eggs.TXT
+dir2
+dir1
+date.c
+dangling
+cherry.txt
+banana
+apple
+dir1
+dir2
+emptyd
+banana
+run.sh
+dangling
+apple
+lnk
+cherry.txt
+date.c
+eggs.TXT
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+x~
+cherry.txt
+banana
+apple
+date.c
+date.c
+apple
+banana
+cherry.txt
+apple
+banana
+dangling
+dir1
+dir2
+emptyd
+fig10
+fig9
+lnk
+x~
+file-1.2.10
+file-1.2.9
+date.c
+run.sh
+cherry.txt
+eggs.TXT
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig9
+fig10
+file-1.2.9
+file-1.2.10
+lnk
+run.sh
+x~
+apple
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk
+run.sh
+.
+..
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+.hidden
+lnk
+run.sh
+apple
+banana
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+lnk
+run.sh
+x~
+apple
+banana
+cherry.txt
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk
+run.sh
+x~
+.
+..
+apple
+banana
+cherry.txt
+dangling
+date.c
+dir1
+dir2
+eggs.TXT
+emptyd
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+.hidden
+lnk
+run.sh
+x~
+.y~
+dir1
+dir2
+dir1
+dir2
+emptyd
+apple
+banana
+cherry.txt
+dangling
+date.c
+eggs.TXT
+fig10
+fig9
+file-1.2.10
+file-1.2.9
+lnk
+run.sh
+x~
+x~
+lnk
+dir1
+dir2
+fig9
+apple
+fig10
+banana
+date.c
+emptyd
+run.sh
+dangling
+eggs.TXT
+cherry.txt
+file-1.2.9
+file-1.2.10
+apple       emptyd
+banana      fig10
+cherry.txt  fig9
+dangling    file-1.2.10
+date.c      file-1.2.9
+dir1        lnk
+dir2        run.sh
+eggs.TXT    x~
+apple, banana,
+cherry.txt,
+dangling, date.c,
+dir1, dir2,
+eggs.TXT, emptyd,
+fig10, fig9,
+file-1.2.10,
+file-1.2.9, lnk,
+run.sh, x~
+apple|banana|
+rc=2
+apple
+banana
+rc=2
+rc=2
+rc=1
+rc=1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "ls full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "ls full" "${R}FAILED${N}";
+		return 131072;
+	}
+}
+
+fls_quote() {
+	./sh2elf scripts/test_ls_quote.sh -o ls_quote.elf >/dev/null
+	CAPTURE=$(./ls_quote.elf)
+	EXPECTED=$(cat <<'EOF'
+a:b
+back\sl
+dq"x
+éte
+#h
+it's
+nl
+x
+plain
+q?m
+sp ace
+st*r
+tab	x
+x=y
+"a:b"
+"back\\sl"
+"dq\"x"
+"éte"
+"#h"
+"it's"
+"nl\nx"
+"plain"
+"q?m"
+"sp ace"
+"st*r"
+"tab\tx"
+"x=y"
+a:b
+back\\sl
+dq"x
+éte
+#h
+it's
+nl\nx
+plain
+q?m
+sp\ ace
+st*r
+tab\tx
+x=y
+a:b
+back\sl
+dq"x
+éte
+#h
+it's
+nl
+x
+plain
+q?m
+sp ace
+st*r
+tab	x
+x=y
+a:b
+back\sl
+dq"x
+éte
+#h
+it's
+nl?x
+plain
+q?m
+sp ace
+st*r
+tab?x
+x=y
+a:b
+'back\sl'
+'dq"x'
+éte
+'#h'
+"it's"
+'nl
+x'
+plain
+'q?m'
+'sp ace'
+'st*r'
+'tab	x'
+'x=y'
+'a:b'
+'back\sl'
+'dq"x'
+'éte'
+'#h'
+"it's"
+'nl
+x'
+'plain'
+'q?m'
+'sp ace'
+'st*r'
+'tab	x'
+'x=y'
+a:b
+'back\sl'
+'dq"x'
+éte
+'#h'
+"it's"
+'nl'$'\n''x'
+plain
+'q?m'
+'sp ace'
+'st*r'
+'tab'$'\t''x'
+'x=y'
+'a:b'
+'back\sl'
+'dq"x'
+'éte'
+'#h'
+"it's"
+'nl'$'\n''x'
+'plain'
+'q?m'
+'sp ace'
+'st*r'
+'tab'$'\t''x'
+'x=y'
+"a:b"
+"back\\sl"
+"dq\"x"
+"éte"
+"#h"
+"it's"
+"nl\nx"
+"plain"
+"q?m"
+"sp ace"
+"st*r"
+"tab\tx"
+"x=y"
+a:b
+back\sl
+"dq\"x"
+éte
+#h
+it's
+"nl\nx"
+plain
+q?m
+sp ace
+st*r
+"tab\tx"
+x=y
+a:b
+back\\sl
+dq"x
+éte
+#h
+it's
+nl\nx
+plain
+q?m
+sp\ ace
+st*r
+tab\tx
+x=y
+a:b
+back\sl
+dq"x
+éte
+#h
+it's
+nl
+x
+plain
+q?m
+sp ace
+st*r
+tab	x
+x=y
+‘a:b’
+‘back\\sl’
+‘dq"x’
+‘éte’
+‘#h’
+‘it's’
+‘nl\nx’
+‘plain’
+‘q?m’
+‘sp ace’
+‘st*r’
+‘tab\tx’
+‘x=y’
+‘a:b’
+‘back\\sl’
+‘dq"x’
+‘éte’
+‘#h’
+‘it's’
+‘nl\nx’
+‘plain’
+‘q?m’
+‘sp ace’
+‘st*r’
+‘tab\tx’
+‘x=y’
+ a:b	   '#h'		 'q?m'		'x=y'
+'back\sl'  "it's"	 'sp ace'
+'dq"x'	   'nl'$'\n''x'  'st*r'
+ éte	    plain	 'tab'$'\t''x'
+a:b  back\sl  dq"x  éte    #h	it's  nl?x  plain
+q?m  sp ace   st*r  tab?x  x=y
+a:b, back\\sl, dq"x, éte, #h, it's,
+nl\nx, plain, q?m, sp\ ace, st*r,
+tab\tx, x=y
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "ls quoting" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "ls quoting" "${R}FAILED${N}";
+		return 262144;
+	}
+}
+
+fls_long() {
+	./sh2elf scripts/test_ls_long.sh -o ls_long.elf >/dev/null
+	CAPTURE=$(./ls_long.elf)
+	EXPECTED=$(cat <<'EOF'
+-rw-r----- 2       6 1234567890 a
+-rw-r--r-- 1    5000 1234567890 big
+lrwxrwxrwx 1       7 1234567890 dangling -> nowhere
+-rwxr-xr-x 1      10 1234567890 exe
+-rw-r----- 2       6 1234567890 hard
+-rw-r--r-- 1 3000000 1234567890 huge
+lrwxrwxrwx 1       1 1234567890 lnk -> a
+-rwxr-sr-x 1       0 1234567890 sgid
+-rw-r--r-T 1       0 1234567890 sticky
+-rwsr-xr-x 1       0 1234567890 suid
+-rw-r--r-- 1 4.9K 1234567890 big
+-rw-r--r-- 1 2.9M 1234567890 huge
+-rw-r--r-- 1 5.0k 1234567890 big
+-rw-r--r-- 1 3.0M 1234567890 huge
+-rw-r--r-- 1    5 1234567890 big
+-rw-r--r-- 1 2930 1234567890 huge
+-rw-r--r-- 1 3M 1234567890 huge
+-rw-r--r-- 1 3,000,000 1234567890 huge
+-rw-r----- 2  6 1234567890 a
+lrwxrwxrwx 1  7 1234567890 dangling -> nowhere
+-rwxr-xr-x 1 10 1234567890 exe*
+lrwxrwxrwx 1  1 1234567890 lnk -> a
+-rw-r----- 2 6 1234567890 lnk
+-rw-r----- 2 6 1234567890 a
+-rw-r----- 2 6 1234567890 hard
+-rw-r----- 2 6 1234567890|000000000|000|13|% a
+-rw-r----- 2 6 [1234567890][1234567890][1234567890] a
+-rw-r----- 2 6 1234567890 a
+-rw-r----- 2 6 1234567890 a
+-rw-r--r-- 1 3000000 1234567890 huge
+-rw-r--r-- 1    5000 1234567890 big
+-rwxr-xr-x 1      10 1234567890 exe
+-rw-r----- 2       6 1234567890 a
+-rw-r----- 2       6 1234567890 a
+-rwxr-xr-x 1      10 1234567890 exe
+-rw-r--r-- 1    5000 1234567890 big
+-rw-r--r-- 1 3000000 1234567890 huge
+rc=2
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "ls long format" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "ls long format" "${R}FAILED${N}";
+		return 524288;
+	}
+}
+
+fls_rec() {
+	./sh2elf scripts/test_ls_rec.sh -o ls_rec.elf >/dev/null
+	CAPTURE=$(./ls_rec.elf)
+	EXPECTED=$(cat <<'EOF'
+top:
+f1
+sub1
+sub2
+
+top/sub1:
+deep
+f2
+
+top/sub1/deep:
+f3
+
+top/sub2:
+up
+top/sub2:
+.
+..
+.h
+up
+other:
+o1
+
+top:
+f1
+sub1
+sub2
+
+top/sub1:
+deep
+f2
+
+top/sub1/deep:
+f3
+
+top/sub2:
+up
+top/sub1:
+deep
+f2
+
+top/sub1/deep:
+f3
+top/f1
+
+other:
+o1
+
+top:
+f1
+sub1
+sub2
+other
+top
+top/sub2:
+up
+
+top/sub2/up:
+f1
+sub1
+sub2
+
+top/sub2/up/sub1:
+deep
+f2
+
+top/sub2/up/sub1/deep:
+f3
+rc=2
+top/sub1/deep:
+f3
+rc=2
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "ls recursive" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "ls recursive" "${R}FAILED${N}";
+		return 1048576;
+	}
+}
+
+ffind_full() {
+	./sh2elf scripts/test_find_full.sh -o find_full.elf >/dev/null
+	CAPTURE=$(./find_full.elf)
+	EXPECTED=$(cat <<'EOF'
+.
+./alpha
+./a.txt
+./big.bin
+./d1
+./d1/mid.dat
+./d1/s1
+./d1/s1/deep
+./d1/s1/deep/f2
+./d1/s1/f1
+./d2
+./d2/.hid
+./d2/vis
+./dang
+./dl
+./empty
+./it's
+./lnk
+./sp ace
+./x~
+./Zeta
+./a.txt
+./Zeta
+./alpha
+.
+./d1
+./d1/s1
+./d1/s1/deep
+./d2
+./empty
+./dang
+./dl
+./lnk
+./dang
+./dang
+./big.bin
+./alpha
+./a.txt
+./d1/s1/deep/f2
+./d1/s1/f1
+./d2/.hid
+./d2/vis
+./it's
+./sp ace
+./x~
+./Zeta
+./alpha
+./d2/.hid
+./d2/vis
+./empty
+./it's
+./sp ace
+./x~
+./Zeta
+./alpha
+./Zeta
+./alpha
+./a.txt
+./big.bin
+./d2/.hid
+./d2/vis
+./it's
+./sp ace
+./x~
+./Zeta
+d1/mid.dat
+d1/s1/f1
+d1/s1/deep/f2
+d1/s1/deep
+d1/s1
+d1
+d1/s1/f1
+d1/s1/deep
+.
+./alpha
+./a.txt
+./big.bin
+./d1/mid.dat
+./d1/s1/deep/f2
+./d1/s1/f1
+./d2/vis
+./dang
+./dl
+./it's
+./lnk
+./sp ace
+./x~
+./alpha
+./a.txt
+./big.bin
+d1|d1|.||0|d|4096|775|drwxrwxr-x
+d1/mid.dat|mid.dat|d1|mid.dat|1|f|1234|664|-rw-rw-r--
+d1/s1|s1|d1|s1|1|d|4096|775|drwxrwxr-x
+d1/s1/f1|f1|d1/s1|s1/f1|2|f|1|664|-rw-rw-r--
+d1/s1/deep|deep|d1/s1|s1/deep|2|d|4096|775|drwxrwxr-x
+d1/s1/deep/f2|f2|d1/s1/deep|s1/deep/f2|3|f|2|664|-rw-rw-r--
+Thu Jan  2 03:04:05.0000000000 2020|2020-01-02 03:04:05.0000000000|1577952245.0000000000|2020-01-02|2020-01-02+03:04:05.0000000000
+      5000|big.bin |big|8|16|1.6384
+[./sp ace]
+dl -> d1 d
+lnk -> a.txt f
+dang -> nowhere N
+0000000   d   1   /   s   1   /   f   1  \0
+0000011
+find: ‘nonexist’: No such file or directory
+find: missing argument to `-name'
+find: unknown predicate `-badpred'
+find: Unknown argument to -type: q
+Predicate List:
+[-maxdepth] [-a] [-name] [-o] [-print] 
+Eval Tree:
+pred=[-o] type=bi_op prec=or cost=Unknown est_success_rate=1.000 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Unknown est_success_rate=0.1000 no side effects 
+    left:
+        pred=[-maxdepth 0] type=primary prec=no cost=Unknown est_success_rate=1.000 no side effects 
+        no children.
+    right:
+        pred=[-name x] type=primary prec=no cost=Unknown est_success_rate=0.1000 no side effects 
+        no children.
+right:
+    pred=[-print] type=primary prec=no cost=Unknown est_success_rate=1.000 side effects 
+    no children.
+Normalized Eval Tree:
+pred=[-o] type=bi_op prec=or cost=Nothing est_success_rate=1.000 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=1.000 no side effects 
+        no left.
+        right:
+            pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+            no children.
+    right:
+        pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+        no children.
+right:
+    pred=[-print] type=primary prec=no cost=Nothing est_success_rate=1.000 side effects 
+    no children.
+Normalized Eval Tree:
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=1.000 no side effects 
+    no left.
+    right:
+        pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+        no children.
+right:
+    pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+    no children.
+Optimized Eval Tree:
+pred=[-o] type=bi_op prec=or cost=Nothing est_success_rate=1.000 no side effects 
+left:
+    pred=[-o] type=bi_op prec=or cost=Nothing est_success_rate=0.1000 no side effects 
+    no left.
+    right:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+            no left.
+            right:
+                pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+                no children.
+        right:
+            pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+            no children.
+right:
+    pred=[-print] type=primary prec=no cost=Nothing est_success_rate=1.000 side effects 
+    no children.
+Optimized command line:
+ ( -name x [est success rate 0.1] -a [est success rate 0.1] -maxdepth 0 [est success rate 1]  ) -o [est success rate 1] -print [est success rate 1] 
+.
+consider_visiting (early): ‘d2’: fts_info=FTS_D , fts_level= 0, prev_depth=-2147483648 fts_path=‘d2’, fts_accpath=‘d2’
+consider_visiting (early): ‘d2’: fts_info=FTS_DP, fts_level= 0, prev_depth=1 fts_path=‘d2’, fts_accpath=‘d2’
+consider_visiting (early): ‘d2/.hid’: fts_info=FTS_NSOK, fts_level= 1, prev_depth=0 fts_path=‘d2/.hid’, fts_accpath=‘.hid’
+consider_visiting (early): ‘d2/vis’: fts_info=FTS_NSOK, fts_level= 1, prev_depth=1 fts_path=‘d2/vis’, fts_accpath=‘vis’
+consider_visiting (late): ‘d2’: fts_info=FTS_D , isdir=1 ignore=0 have_stat=1 have_type=1 
+consider_visiting (late): ‘d2’: fts_info=FTS_DP, isdir=1 ignore=1 have_stat=1 have_type=1 
+consider_visiting (late): ‘d2/.hid’: fts_info=FTS_NSOK, isdir=0 ignore=0 have_stat=0 have_type=1 
+consider_visiting (late): ‘d2/vis’: fts_info=FTS_NSOK, isdir=0 ignore=0 have_stat=0 have_type=1 
+d2
+d2/.hid
+d2/vis
+Predicate List:
+[(] [-maxdepth] [-a] [-type] [-a] [-name] [-a] [-size] [)] [-a] [-print] 
+Eval Tree:
+pred=[-a] type=bi_op prec=and cost=Unknown est_success_rate=0.07875 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Unknown est_success_rate=0.07875 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Unknown est_success_rate=0.08750 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Unknown est_success_rate=0.8750 no side effects 
+            left:
+                pred=[-maxdepth 0] type=primary prec=no cost=Unknown est_success_rate=1.000 no side effects 
+                no children.
+            right:
+                pred=[-type f] type=primary prec=no cost=Unknown est_success_rate=0.8750 no side effects Needs type
+                no children.
+        right:
+            pred=[-name x] type=primary prec=no cost=Unknown est_success_rate=0.1000 no side effects 
+            no children.
+    right:
+        pred=[-size +1] type=primary prec=no cost=Unknown est_success_rate=0.9000 no side effects Needs stat
+        no children.
+right:
+    pred=[-print] type=primary prec=no cost=Unknown est_success_rate=1.000 side effects 
+    no children.
+Normalized Eval Tree:
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.07875 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.07875 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.08750 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+            left:
+                pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=1.000 no side effects 
+                no left.
+                right:
+                    pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+                    no children.
+            right:
+                pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+                no children.
+        right:
+            pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+            no children.
+    right:
+        pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+        no children.
+right:
+    pred=[-print] type=primary prec=no cost=Nothing est_success_rate=1.000 side effects 
+    no children.
+-O3: categorising predicate -size +1 by cost (StatInfo)
+-O3: promoting cheap predicate -name x into name_list
+-O3: categorising predicate -type f by cost (Type)
+-O3: promoting cheap predicate -maxdepth 0 into name_list
+predlist before merge sort:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=1.000 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.08750 no side effects 
+            no left.
+            right:
+                pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+                no children.
+        right:
+            pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+            no children.
+predlist after merge sort:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+            no left.
+            right:
+                pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+                no children.
+        right:
+            pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+            no children.
+predlist before merge sort:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+        no left.
+        right:
+            pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+            no children.
+predlist after merge sort:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+        no left.
+        right:
+            pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+            no children.
+predlist before merge sort:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.07875 no side effects 
+        no left.
+        right:
+            pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+            no children.
+predlist after merge sort:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.9000 no side effects 
+        no left.
+        right:
+            pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+            no children.
+Not an arm swap candidate (Right subtree has side-effects):
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.07875 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.9000 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+            left:
+                pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+                no left.
+                right:
+                    pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+                    no children.
+            right:
+                pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+                no children.
+        right:
+            pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+            no children.
+    right:
+        pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+        no children.
+right:
+    pred=[-print] type=primary prec=no cost=Nothing est_success_rate=1.000 side effects 
+    no children.
+Not an arm swap candidate (efficient as-is):
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.9000 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+            no left.
+            right:
+                pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+                no children.
+        right:
+            pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+            no children.
+    right:
+        pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+        no children.
+right:
+    pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+    no children.
+Not an arm swap candidate (efficient as-is):
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+        no left.
+        right:
+            pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+            no children.
+    right:
+        pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+        no children.
+right:
+    pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+    no children.
+Success rates: l=0.100000, r=1.000000
+Performing arm swap on:
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+    no left.
+    right:
+        pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+        no children.
+right:
+    pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+    no children.
+Success rates: l=1.000000, r=0.100000
+Not an arm swap candidate (Operation is AND; right success rate <= left):
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+    no left.
+    right:
+        pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+        no children.
+right:
+    pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+    no children.
+Not an arm swap candidate (Doesn't have two arms):
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+no left.
+right:
+    pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+    no children.
+Not an arm swap candidate (Not a binary operation):
+pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+no children.
+Not an arm swap candidate (Not a binary operation):
+pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+no children.
+Not an arm swap candidate (Not a binary operation):
+pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+no children.
+Not an arm swap candidate (Not a binary operation):
+pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+no children.
+Not an arm swap candidate (Not a binary operation):
+pred=[-print] type=primary prec=no cost=Nothing est_success_rate=1.000 side effects 
+no children.
+Optimized Eval Tree:
+pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.07875 no side effects 
+left:
+    pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.9000 no side effects 
+    left:
+        pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.8750 no side effects 
+        left:
+            pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+            left:
+                pred=[-a] type=bi_op prec=and cost=Nothing est_success_rate=0.1000 no side effects 
+                no left.
+                right:
+                    pred=[-maxdepth 0] type=primary prec=no cost=Nothing est_success_rate=1.000 no side effects 
+                    no children.
+            right:
+                pred=[-name x] type=primary prec=no cost=Nothing est_success_rate=0.1000 no side effects 
+                no children.
+        right:
+            pred=[-type f] type=primary prec=no cost=Type est_success_rate=0.8750 no side effects Needs type
+            no children.
+    right:
+        pred=[-size +1] type=primary prec=no cost=StatInfo est_success_rate=0.9000 no side effects Needs stat
+        no children.
+right:
+    pred=[-print] type=primary prec=no cost=Nothing est_success_rate=1.000 side effects 
+    no children.
+Optimized command line:
+ (  (  ( -maxdepth 0 [est success rate 1] -a [est success rate 0.1] -name x [est success rate 0.1]  ) -a [est success rate 0.875] [need type] -type f [est success rate 0.875]  ) -a [est success rate 0.9] [call stat] -size +1 [est success rate 0.9]  ) -a [est success rate 0.07875] -print [est success rate 1] 
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Find Full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Find Full" "${R}FAILED${N}";
+		return 2097152;
+	}
+}
+
+ffind_exec() {
+	./sh2elf scripts/test_find_exec.sh -o find_exec.elf >/dev/null
+	CAPTURE=$(./find_exec.elf)
+	EXPECTED=$(cat <<'EOF'
+X ./a.txt
+X ./b.txt
+X ./d1/c.txt
+X ./d1/s1/d.txt
+X ./d2/e.txt
+./a.txt
+./b.txt
+./d1/c.txt
+./d1/s1/d.txt
+./d2/e.txt
+[./c.txt]
+[./d.txt]
+T/d1
+T/d1/s1
+xa.txty a.txta.txt
+SCRIPT a.txt
+NOSHEBANG a.txt
+find: ‘nosuchcmd’: No such file or directory
+a.txt
+rc=1
+rc=0
+find: Only one instance of {} is supported with -exec ... +
+find: You may not use {} within the utility name for -execdir and -okdir, because this is a potential security problem.
+find: missing argument to `-exec'
+find: missing argument to `-exec'
+< echo ... a.txt > ? OK a.txt
+< echo ... b.txt > ? a.txt
+d1
+a.txt
+find: ‘list2’:2: invalid zero-length file name
+b.txt
+find: extra operand ‘.’
+find: file operands cannot be combined with -files0-from
+d2/e.txt
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Find Exec" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Find Exec" "${R}FAILED${N}";
+		return 4194304;
+	}
+}
+
+ffind_regex() {
+	./sh2elf scripts/test_find_regex.sh -o find_regex.elf >/dev/null
+	CAPTURE=$(./find_regex.elf)
+	EXPECTED=$(cat <<'EOF'
+./a1
+./a22
+./aaa
+./abab
+./abc
+./abd
+./a1
+./a22
+./a1
+./a22
+./abab
+./aaa
+./aaa
+./file.tar.gz
+./file.txt
+./x y
+./README
+./abc
+./Abc
+./file.tar.gz
+./file.txt
+./Abc
+./éclair
+./README
+find: failed to compile regular expression '[': Invalid regular expression
+find: Unknown regular expression type ‘nosuch’; valid types are ‘findutils-default’, ‘awk’, ‘ed’, ‘egrep’, ‘emacs’, ‘gnu-awk’, ‘grep’, ‘posix-awk’, ‘posix-basic’, ‘posix-egrep’, ‘posix-extended’, ‘posix-minimal-basic’, ‘sed’.
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Find Regex" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Find Regex" "${R}FAILED${N}";
+		return 8388608;
+	}
+}
+
+ffind_time() {
+	./sh2elf scripts/test_find_time.sh -o find_time.elf >/dev/null
+	CAPTURE=$(./find_time.elf)
+	EXPECTED=$(cat <<'EOF'
+./future
+./mid
+./midns
+./old2
+./future
+./mid
+./midns
+./old
+./old2
+./future
+./midns
+./future
+./midns
+./future
+./mid
+./midns
+./moon
+./future
+./future
+./mid
+./midns
+find: I cannot figure out how to interpret ‘2021-02-30’ as a date or time
+find: I cannot figure out how to interpret ‘garbage’ as a date or time
+./future
+./mid
+./midns
+./old2
+./midns
+./mid
+./midns
+./moon
+./old
+./old2
+./future 2037 12 31 23 59
+./mid 2021 07 04 12 00
+./midns 2021 07 04 12 00
+./moon 1969 07 20 16 17
+./old 2020 01 02 03 04
+./old2 2020 01 02 03 04
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Find Time" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Find Time" "${R}FAILED${N}";
+		return 16777216;
+	}
+}
+
+fxargs_full() {
+	./sh2elf scripts/test_xargs_full.sh -o xargs_full.elf >/dev/null
+	CAPTURE=$(./xargs_full.elf)
+	EXPECTED=$(cat <<'EOF'
+a b c
+X a b c
+N a b
+N c d
+N e
+L l1 a
+L l2 b
+L l3 c
+L l1 a l2 b
+L l3 c
+L l1 l2
+L l3
+a b
+c d
+e f
+ab cd
+e
+a
+b c
+d
+a
+b
+c
+a b
+a b
+a b
+empty
+blank
+aaaa bbbb
+cccc
+echo a b c
+a b c
+echo a b 'c d'
+a b c d
+xargs: argument line too long
+aaaa
+bbbb
+cccc
+xargs: value 0 for -s option should be >= 1
+xargs: cannot fit single argument within argument list size limit
+xargs: value 0 for -n option should be >= 1
+Try 'xargs --help' for more information.
+xargs: invalid option -- 'q'
+Try 'xargs --help' for more information.
+xargs: option '--ma=1' is ambiguous; possibilities: '--max-lines' '--max-args' '--max-chars' '--max-procs'
+Try 'xargs --help' for more information.
+xargs: warning: options --max-args and -L are mutually exclusive, ignoring previous --max-args value
+a b
+xargs: warning: the -E option has no effect if -0 or -d is used.
+
+a b
+
+xargs: unmatched double quote; by default quotes are special to xargs unless you use the -0 option
+xargs: Invalid escape sequence \q in input delimiter specification.
+xargs: WARNING: a NUL character occurred in the input.  It cannot be passed through in the argument list.  Did you mean to use the --null option?
+x
+xargs: failed to run command ‘nosuchcmd’: No such file or directory
+rc=127
+rc=123
+xargs: sh: exited with status 255; aborting
+rc=124
+xargs: sh: terminated by signal 15
+rc=125
+xargs: failed to run command ‘./’: Permission denied
+rc=126
+xargs: Cannot open input file ‘/nonexistent’: No such file or directory
+rc=1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Xargs Full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Xargs Full" "${R}FAILED${N}";
+		return 33554432;
+	}
+}
+
+fxargs_exec() {
+	./sh2elf scripts/test_xargs_exec.sh -o xargs_exec.elf >/dev/null
+	CAPTURE=$(./xargs_exec.elf)
+	EXPECTED=$(cat <<'EOF'
+[x y] and x y
+[z] and z
+x yx y-x y
+zz-z
+[x y]
+[z]
+[a  b]
+[c]
+2: one two
+a
+c
+rc=123
+a
+b
+c
+d
+0 a
+0 b
+done
+F 1 2 3
+1 2
+3
+done
+5
+923a707a733f6c84562b529886c97406  -
+e4748ed75e6bcb477c62fbd7f23bdafa  -
+e4389a7129bb0d8f7434bbf6dc7c373e  -
+ebd1c732d13ccf2f495f7f05cd593067  -
+1 2 3 4 5 6 7
+8 9 10
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Xargs Exec" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Xargs Exec" "${R}FAILED${N}";
+		return 67108864;
+	}
+}
+
+fcp_full() {
+	./sh2elf scripts/test_cp_full.sh -o cp_full.elf >/dev/null
+	CAPTURE=$(./cp_full.elf)
+	EXPECTED=$(cat <<'EOF'
+hello
+hello
+hello
+hello
+cp: cannot stat 'nonexist': No such file or directory
+rc=1
+cp: -r not specified; omitting directory 'd'
+rc=1
+cp: 'a' and 'a' are the same file
+rc=1
+cp: missing file operand
+Try 'cp --help' for more information.
+rc=1
+cp: missing destination file operand after 'a'
+Try 'cp --help' for more information.
+rc=1
+cp: target 'c': No such file or directory
+rc=1
+cp: extra operand 'e'
+Try 'cp --help' for more information.
+rc=1
+cp: invalid option -- 'k'
+Try 'cp --help' for more information.
+rc=1
+cp: invalid argument ‘bogus’ for ‘--sparse’
+Valid arguments are:
+  - ‘never’
+  - ‘auto’
+  - ‘always’
+Try 'cp --help' for more information.
+rc=1
+cp: invalid argument ‘x’ for ‘--update’
+Valid arguments are:
+  - ‘all’
+  - ‘none’
+  - ‘none-fail’
+  - ‘older’
+Try 'cp --help' for more information.
+rc=1
+cp: cannot make both hard and symbolic links
+Try 'cp --help' for more information.
+rc=1
+cp: --backup is mutually exclusive with -n or --update=none-fail
+Try 'cp --help' for more information.
+rc=1
+cp: cannot preserve security context without an SELinux-enabled kernel
+rc=1
+'a' -> 'z3'
+'a' -> 'b'
+'a' -> 'e/a'
+'b' -> 'e/b'
+cp: cannot create regular file 'nodir/': Not a directory
+rc=1
+cp: target 'nodir': No such file or directory
+rc=1
+rc=0
+new
+cp: not replacing 'n'
+rc=1
+'a' -> 'z4'
+copy offload: yes, reflink: unsupported, sparse detection: no
+cp: overwrite 'n'? 
+hello
+cp: overwrite 'n'? 
+rc=0
+hello
+cp: cannot create regular file 'ro': Permission denied
+rc=1
+hello
+cp: not writing through dangling symlink 'dangle'
+rc=1
+"q'uote" -> 'sp ace'
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "cp full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "cp full" "${R}FAILED${N}";
+		return 134217728;
+	}
+}
+
+fcp_tree() {
+	./sh2elf scripts/test_cp_tree.sh -o cp_tree.elf >/dev/null
+	CAPTURE=$(./cp_tree.elf)
+	EXPECTED=$(cat <<'EOF'
+z2/f1 664 981173106 2
+z2/sub 750 981173106 3
+z2/hard 664 981173106 2
+z2/sub/f2 664 981173106 1
+z2/lnk symbolic link
+z1:
+f1
+hard
+lnk
+sub
+
+z1/sub:
+deep
+f2
+
+z1/sub/deep:
+f3
+'d' -> 'e/d'
+'d/f1' -> 'e/d/f1'
+'d/hard' -> 'e/d/hard'
+'d/lnk' -> 'e/d/lnk'
+'d/sub/deep' -> 'e/d/sub/deep'
+'d/sub/deep/f3' -> 'e/d/sub/deep/f3'
+'d/sub' -> 'e/d/sub'
+'d/sub/f2' -> 'e/d/sub/f2'
+cp: cannot copy a directory, 'd', into itself, 'd/sub/d'
+rc=1
+z3/lnk regular file
+664 981173106
+z4
+z4~
+z4
+z4~
+z4.~1~
+z4.~2~
+z4
+z4~
+z4.~1~
+z4.~2~
+z4.~3~
+'d/sub/f2' -> 'e/d/sub/f2'
+e/d:
+f1
+hard
+lnk
+sub
+
+e/d/sub:
+deep
+f2
+
+e/d/sub/deep:
+f3
+2
+'sy' -> 'a'
+removed 'e/d/f1'
+f1
+hard
+lnk
+sub
+cp: cannot overwrite non-directory 'e/d/f1' with directory 'd'
+rc=1
+f1
+hard
+lnk
+sub
+a
+d
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "cp tree" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "cp tree" "${R}FAILED${N}";
+		return 268435456;
+	}
+}
+
+fmv_full() {
+	./sh2elf scripts/test_mv_full.sh -o mv_full.elf >/dev/null
+	CAPTURE=$(./mv_full.elf)
+	EXPECTED=$(cat <<'EOF'
+hello
+hello
+a
+f1
+sub
+a
+mv: cannot stat 'nonexist': No such file or directory
+rc=1
+mv: missing file operand
+Try 'mv --help' for more information.
+rc=1
+mv: missing destination file operand after 'b'
+Try 'mv --help' for more information.
+rc=1
+mv: extra operand 'd'
+Try 'mv --help' for more information.
+rc=1
+mv: invalid option -- 'k'
+Try 'mv --help' for more information.
+rc=1
+mv: cannot combine --backup with --exchange, -n, or --update=none-fail
+Try 'mv --help' for more information.
+rc=1
+mv: invalid argument ‘x’ for ‘--update’
+Valid arguments are:
+  - ‘all’
+  - ‘none’
+  - ‘none-fail’
+  - ‘older’
+Try 'mv --help' for more information.
+rc=1
+mv: cannot stat 'b': No such file or directory
+rc=1
+mv: cannot move 'd' to a subdirectory of itself, 'd/sub/d'
+rc=1
+mv: cannot overwrite non-directory 'd/f1' with directory 'e'
+rc=1
+a
+f1
+renamed 'e/f1' -> 'd/f1'
+renamed 'e/a' -> 'd/a'
+y
+mv: not replacing 'm'
+rc=1
+mv: overwrite 'm'? 
+rc=0
+mv: overwrite 'm'? 
+x
+m
+m~
+m
+m~
+m.~1~
+m.~2~
+q
+x
+renamed 'd' -> 'x'
+mv: cannot stat 'd/': No such file or directory
+rc=1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "mv full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "mv full" "${R}FAILED${N}";
+		return 536870912;
+	}
+}
+
+fmv_xdev() {
+	./sh2elf scripts/test_mv_xdev.sh -o mv_xdev.elf >/dev/null
+	CAPTURE=$(./mv_xdev.elf)
+	EXPECTED=$(cat <<'EOF'
+copied 'a' -> '/var/tmp/sh2elf_mv_xb/a'
+removed 'a'
+/var/tmp/sh2elf_mv_xb/a 664 981173106
+copied 'd/hard' -> '/var/tmp/sh2elf_mv_xb/d/hard'
+copied 'd/lnk' -> '/var/tmp/sh2elf_mv_xb/d/lnk'
+copied 'd/sub/f2' -> '/var/tmp/sh2elf_mv_xb/d/sub/f2'
+created directory '/var/tmp/sh2elf_mv_xb/d'
+created directory '/var/tmp/sh2elf_mv_xb/d/sub'
+removed 'd/f1'
+removed 'd/hard'
+removed directory 'd'
+removed directory 'd/sub'
+removed 'd/lnk'
+removed 'd/sub/f2'
+/var/tmp/sh2elf_mv_xb/d 775 981173106 3
+/var/tmp/sh2elf_mv_xb/d/sub 750 981173106 2
+/var/tmp/sh2elf_mv_xb/d/f1 664 981173106 2
+/var/tmp/sh2elf_mv_xb/d/hard 664 981173106 2
+/var/tmp/sh2elf_mv_xb/d/sub/f2 664 981173106 1
+/var/tmp/sh2elf_mv_xb/d/lnk symbolic link
+copied '/var/tmp/sh2elf_mv_xb/d/f1' -> '/tmp/sh2elf_mv_xa/d2/f1'
+copied '/var/tmp/sh2elf_mv_xb/d/lnk' -> '/tmp/sh2elf_mv_xa/d2/lnk'
+copied '/var/tmp/sh2elf_mv_xb/d/sub/f2' -> '/tmp/sh2elf_mv_xa/d2/sub/f2'
+created directory '/tmp/sh2elf_mv_xa/d2'
+created directory '/tmp/sh2elf_mv_xa/d2/sub'
+removed directory '/var/tmp/sh2elf_mv_xb/d'
+removed directory '/var/tmp/sh2elf_mv_xb/d/sub'
+removed '/var/tmp/sh2elf_mv_xb/d/f1'
+removed '/var/tmp/sh2elf_mv_xb/d/hard'
+removed '/var/tmp/sh2elf_mv_xb/d/lnk'
+removed '/var/tmp/sh2elf_mv_xb/d/sub/f2'
+/tmp/sh2elf_mv_xa/d2:
+f1
+hard
+lnk
+sub
+
+/tmp/sh2elf_mv_xa/d2/sub:
+f2
+copied 'b' -> '/var/tmp/sh2elf_mv_xb/b' (backup: '/var/tmp/sh2elf_mv_xb/b~')
+removed 'b'
+a
+b
+b~
+mv: cannot overwrite directory '/var/tmp/sh2elf_mv_xb/c' with non-directory 'c'
+rc=1
+mv: cannot remove 'ro/s/f': Permission denied
+rc=1
+ro/s:
+f
+
+/var/tmp/sh2elf_mv_xb/ro/s:
+f
+mv: cannot move 'c' to '/var/tmp/sh2elf_mv_xb/z': Invalid cross-device link
+rc=1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "mv xdev" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "mv xdev" "${R}FAILED${N}";
+		return 1073741824;
+	}
+}
+
+frm_full() {
+	./sh2elf scripts/test_rm_full.sh -o rm_full.elf >/dev/null
+	CAPTURE=$(./rm_full.elf)
+	EXPECTED=$(cat <<'EOF'
+b
+c
+d
+e
+ed
+rm: cannot remove 'nonexist': No such file or directory
+rc=1
+rc=0
+rm: missing operand
+Try 'rm --help' for more information.
+rc=1
+rc=0
+rm: invalid option -- 'k'
+Try 'rm --help' for more information.
+rc=1
+rm: invalid argument ‘bad’ for ‘--interactive’
+Valid arguments are:
+  - ‘never’, ‘no’, ‘none’
+  - ‘once’
+  - ‘always’, ‘yes’
+Try 'rm --help' for more information.
+rc=1
+rm: you may not abbreviate the --no-preserve-root option
+rc=1
+rm: cannot remove 'd': Is a directory
+rc=1
+rm: cannot remove 'd': Directory not empty
+rc=1
+removed directory 'ed'
+rm: refusing to remove '.' or '..' directory: skipping '.'
+rc=1
+rm: refusing to remove '.' or '..' directory: skipping 'd/..'
+rc=1
+removed directory 'd/sub'
+removed directory 'd/sub/deep'
+removed 'd/sub/deep/f3'
+removed 'd/sub/f2'
+rm: remove regular file 'b'? 
+b
+c
+d
+e
+rm: remove regular file 'b'? removed 'b'
+
+c
+d
+e
+rm: remove 4 arguments? 
+c
+d
+e
+p
+q
+r
+s
+rm: remove 4 arguments? removed 'p'
+removed 'q'
+removed 'r'
+removed 's'
+rm: remove write-protected regular file 'ro'? 
+c
+d
+e
+ro
+removed 'ro'
+rm: cannot remove 'w/x/k': Permission denied
+rc=1
+removed 'w/x/k'
+removed directory 'w/x'
+removed directory 'w'
+rm: invalid option -- 'o'
+Try 'rm ./-foo' to remove the file '-foo'.
+Try 'rm --help' for more information.
+rc=1
+removed '-foo'
+removed 'd/lnk'
+removed 'd/f1'
+removed directory 'd'
+removed directory 'e'
+c
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "rm full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "rm full" "${R}FAILED${N}";
+		return 1;
+	}
+}
+
+fmkdir_full() {
+	./sh2elf scripts/test_mkdir_full.sh -o mkdir_full.elf >/dev/null
+	CAPTURE=$(./mkdir_full.elf)
+	EXPECTED=$(cat <<'EOF'
+a
+file
+mkdir: cannot create directory ‘a’: File exists
+rc=1
+a
+b
+c
+file
+mkdir: cannot create directory ‘x/y’: No such file or directory
+rc=1
+mkdir: missing operand
+Try 'mkdir --help' for more information.
+rc=1
+mkdir: invalid option -- 'k'
+Try 'mkdir --help' for more information.
+rc=1
+mkdir: invalid mode ‘bad’
+rc=1
+mkdir: invalid mode ‘8’
+rc=1
+rc=0
+mkdir: created directory 'p'
+mkdir: created directory 'p/q'
+mkdir: created directory 'p/q/r'
+mkdir: created directory 'p/q/s'
+mkdir: created directory './t'
+mkdir: created directory './t/../u'
+mkdir: cannot create directory ‘file’: Not a directory
+rc=1
+mkdir: cannot create directory ‘file’: File exists
+rc=1
+mkdir: created directory 'v1'
+mkdir: created directory 'v2'
+m1 700
+m2 1777
+m3 750
+m4 555
+m5 2777
+m6 772
+n1/n2 700
+n3/n4 4757
+n5/n6 0
+mkdir: created directory 'sp ace'
+mkdir: created directory "q'uote"
+-dash
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "mkdir full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "mkdir full" "${R}FAILED${N}";
+		return 2;
+	}
+}
+
+frmdir_full() {
+	./sh2elf scripts/test_rmdir_full.sh -o rmdir_full.elf >/dev/null
+	CAPTURE=$(./rmdir_full.elf)
+	EXPECTED=$(cat <<'EOF'
+a
+e
+file
+y
+rmdir: missing operand
+Try 'rmdir --help' for more information.
+rc=1
+rmdir: invalid option -- 'k'
+Try 'rmdir --help' for more information.
+rc=1
+rmdir: failed to remove 'nonexist': No such file or directory
+rc=1
+rmdir: failed to remove 'file': Not a directory
+rc=1
+rmdir: failed to remove 'e': Directory not empty
+rc=1
+rc=0
+rmdir: removing directory, 'y'
+rmdir: removing directory, 'a/b/c'
+rmdir: removing directory, 'a/b'
+rmdir: removing directory, 'a'
+e
+file
+e
+file
+rmdir: removing directory, 'e/h/i'
+rmdir: removing directory, 'e/h'
+rmdir: removing directory, 'e'
+rmdir: failed to remove directory 'e': Directory not empty
+rc=1
+rmdir: removing directory, 'e/h/i'
+rmdir: removing directory, 'e/h'
+rmdir: removing directory, 'e'
+rc=0
+rmdir: failed to remove 'se/': Symbolic link not followed
+rc=1
+rmdir: failed to remove 'se': Not a directory
+rc=1
+rmdir: failed to remove 'file/': Not a directory
+rc=1
+rmdir: failed to remove '.': Invalid argument
+rc=1
+rmdir: removing directory, 'sp ace'
+rmdir: removing directory, "q'uote"
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "rmdir full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "rmdir full" "${R}FAILED${N}";
+		return 4;
+	}
+}
+
+ftouch_full() {
+	./sh2elf scripts/test_touch_full.sh -o touch_full.elf >/dev/null
+	CAPTURE=$(./touch_full.elf)
+	EXPECTED=$(cat <<'EOF'
+a 1000000000 1000000000
+a 1000000000 981173106
+a 981173106
+b 1000000000.5 1000000000.5
+c 1000086400 1000086400
+c 1000086400 981173106
+e 1579478400
+f 1275393600
+rc=0
+a
+b
+c
+d
+e
+f
+d 7
+touch: missing file operand
+Try 'touch --help' for more information.
+rc=1
+touch: invalid option -- 'k'
+Try 'touch --help' for more information.
+rc=1
+touch: invalid date format ‘bogus’
+rc=1
+touch: invalid date format ‘2005’
+rc=1
+rc=0
+touch: failed to get attributes of 'nonexist': No such file or directory
+rc=1
+touch: cannot specify times from more than one source
+Try 'touch --help' for more information.
+rc=1
+touch: invalid argument ‘bad’ for ‘--time’
+Valid arguments are:
+  - ‘atime’, ‘access’, ‘use’
+  - ‘mtime’, ‘modify’
+Try 'touch --help' for more information.
+rc=1
+touch: cannot touch 'nodir/x': No such file or directory
+rc=1
+touch: setting times of 'a/': Not a directory
+rc=1
+d 9
+sp ace 9
+q'uote 9
+out 11
+a
+b
+c
+d
+e
+f
+out
+q'uote
+sp ace
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "touch full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "touch full" "${R}FAILED${N}";
+		return 8;
+	}
+}
+
+fchmod_full() {
+	./sh2elf scripts/test_chmod_full.sh -o chmod_full.elf >/dev/null
+	CAPTURE=$(./chmod_full.elf)
+	EXPECTED=$(cat <<'EOF'
+mode of 'd' changed from 0775 (rwxrwxr-x) to 0755 (rwxr-xr-x)
+neither symbolic link 'd/dg' nor referent has been changed
+neither symbolic link 'd/sl' nor referent has been changed
+mode of 'd/f' changed from 0664 (rw-rw-r--) to 0644 (rw-r--r--)
+mode of 'd/e' changed from 0775 (rwxrwxr-x) to 0755 (rwxr-xr-x)
+mode of 'd/e/g' changed from 0664 (rw-rw-r--) to 0644 (rw-r--r--)
+rc=0
+mode of 'd/f' changed from 0644 (rw-r--r--) to 6644 (rwSr-Sr--)
+rc=0
+d 755
+d/e 755
+d/f 6644
+d/e/g 644
+mode of 'd/sl' changed from 6644 (rwSr-Sr--) to 0444 (r--r--r--)
+'d/dg' could not be accessed
+rc=1
+neither symbolic link 'd/sl' nor referent has been changed
+neither symbolic link 'd/dg' nor referent has been changed
+rc=0
+mode of 'd/f' changed from 0444 (r--r--r--) to 0000 (---------)
+mode of 'd/f' changed from 0000 (---------) to 0644 (rw-r--r--)
+mode of 'd/e/g' retained as 0644 (rw-r--r--)
+mode of 'd/e/g' changed from 0644 (rw-r--r--) to 0660 (rw-rw----)
+mode of 'd/e' retained as 0755 (rwxr-xr-x)
+mode of 'd/e/g' changed from 0660 (rw-rw----) to 7777 (rwsrwsrwt)
+mode of 'd/e' retained as 0755 (rwxr-xr-x)
+mode of 'd/e/g' changed from 7777 (rwsrwsrwt) to 1777 (rwxrwxrwt)
+mode of 'd/e/g' changed from 1777 (rwxrwxrwt) to 0755 (rwxr-xr-x)
+chmod: failed to get attributes of 'nonexist': No such file or directory
+rc=1
+chmod: missing operand
+Try 'chmod --help' for more information.
+rc=1
+chmod: missing operand after ‘755’
+Try 'chmod --help' for more information.
+rc=1
+chmod: invalid mode: ‘xyz’
+Try 'chmod --help' for more information.
+rc=1
+chmod: invalid mode: ‘u+q’
+Try 'chmod --help' for more information.
+rc=1
+chmod: invalid option -- 'k'
+Try 'chmod --help' for more information.
+rc=1
+chmod: cannot access 'nonexist': No such file or directory
+rc=1
+rc=1
+chmod: cannot access 'nonexist': No such file or directory
+'nonexist' could not be accessed
+rc=1
+chmod: -R --dereference requires either -H or -L
+rc=1
+chmod: cannot access '755': No such file or directory
+rc=1
+chmod: it is dangerous to operate recursively on '/'
+chmod: use --no-preserve-root to override this failsafe
+rc=1
+mode of 'd/f' changed from 0644 (rw-r--r--) to 0444 (r--r--r--)
+mode of 'd/f' changed from 0444 (r--r--r--) to 0666 (rw-rw-rw-)
+rc=0
+mode of 'd' changed from 0755 (rwxr-xr-x) to 0700 (rwx------)
+mode of 'd/f' changed from 0666 (rw-rw-rw-) to 0600 (rw-------)
+mode of 'd/e' changed from 0755 (rwxr-xr-x) to 0700 (rwx------)
+mode of 'd/e/g' changed from 0755 (rwxr-xr-x) to 0700 (rwx------)
+rc=0
+mode of 'd' retained as 0700 (rwx------)
+chmod: cannot operate on dangling symlink 'd/dg'
+'d/dg' could not be accessed
+mode of 'd/sl' retained as 0600 (rw-------)
+mode of 'd/f' retained as 0600 (rw-------)
+mode of 'd/e' retained as 0700 (rwx------)
+mode of 'd/e/g' retained as 0700 (rwx------)
+rc=1
+mode of 'd' changed from 0700 (rwx------) to 0755 (rwxr-xr-x)
+neither symbolic link 'd/dg' nor referent has been changed
+neither symbolic link 'd/sl' nor referent has been changed
+mode of 'd/f' changed from 0600 (rw-------) to 0755 (rwxr-xr-x)
+mode of 'd/e' changed from 0700 (rwx------) to 0755 (rwxr-xr-x)
+mode of 'd/e/g' changed from 0700 (rwx------) to 0755 (rwxr-xr-x)
+rc=0
+mode of 'sp ace' changed from 0755 (rwxr-xr-x) to 0700 (rwx------)
+d 755
+d/e 755
+d/f 755
+d/e/g 755
+sp ace 700
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "chmod full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "chmod full" "${R}FAILED${N}";
+		return 16;
+	}
+}
+
+fchown_full() {
+	./sh2elf scripts/test_chown_full.sh -o chown_full.elf >/dev/null
+	CAPTURE=$(./chown_full.elf)
+	EXPECTED=$(cat <<'EOF'
+rc=0
+rc=0
+rc=0
+rc=0
+rc=0
+rc=0
+ownership of 'f' retained
+rc=0
+ownership of 'f' retained
+ownership of 'd' retained
+rc=0
+ownership of 'd/e/g' retained
+ownership of 'd/e' retained
+ownership of 'd' retained
+rc=0
+ownership of 'f' retained
+rc=0
+ownership of 'f' retained
+rc=0
+ownership of 'f' retained
+rc=0
+ownership of 'd/e/g' retained
+ownership of 'd/e' retained
+ownership of 'd' retained
+rc=0
+ownership of 'sl' retained
+ownership of 'dg' retained
+rc=0
+chown: missing operand
+Try 'chown --help' for more information.
+rc=1
+chown: missing operand after ‘0’
+Try 'chown --help' for more information.
+rc=1
+chgrp: missing operand
+Try 'chgrp --help' for more information.
+rc=1
+chgrp: missing operand after ‘0’
+Try 'chgrp --help' for more information.
+rc=1
+chown: invalid option -- 'k'
+Try 'chown --help' for more information.
+rc=1
+chown: invalid user: ‘nosuchuser_x’
+rc=1
+chown: invalid spec: ‘nosuchuser_x:’
+rc=1
+chown: invalid group: ‘:nosuchgroup_x’
+rc=1
+chown: invalid user: ‘nosuch_x.nosuch_y’
+rc=1
+chown: invalid user: ‘4294967295’
+rc=1
+chown: invalid user: ‘+x’
+rc=1
+chgrp: invalid group: ‘4294967296’
+rc=1
+chgrp: invalid group: ‘nosuchgroup_x’
+rc=1
+chown: invalid user: ‘nosuchuser_x’
+rc=1
+chown: invalid user: ‘nosuchuser_x’
+rc=1
+chown: cannot access 'nonexist': No such file or directory
+rc=1
+rc=1
+chown: cannot access 'nonexist': No such file or directory
+failed to change ownership of 'nonexist'
+rc=1
+chown: cannot dereference 'dg': No such file or directory
+rc=1
+chown: -R --dereference requires either -H or -L
+rc=1
+chown: failed to get attributes of 'nonexist': No such file or directory
+rc=1
+chgrp: failed to get attributes of 'nonexist': No such file or directory
+rc=1
+chown: it is dangerous to operate recursively on '/'
+chown: use --no-preserve-root to override this failsafe
+rc=1
+chgrp: it is dangerous to operate recursively on '//' (same as '/')
+chgrp: use --no-preserve-root to override this failsafe
+rc=1
+chown: cannot access 'sp ace': No such file or directory
+failed to change ownership of 'sp ace'
+rc=1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "chown full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "chown full" "${R}FAILED${N}";
+		return 32;
+	}
+}
+
+{ fhello && fpipe && flogic && ftruefalse && fpwd && fstderr && fmkdir && frmdir && funlink && fsleep && ftestcmd && fexport && fcat && fhead && fwc && fkill && ftouch && fchmod && fbasename && fvars && fdirname && fprintf && fsubshell && fgroup && fif && fwhile && ffor && funtil && fread && funset && fcp && fmv && frm && ftee && fexpr && fparamexp && fcase && fheredoc && fcmdsub && farith && fglob && ffunc && funame && fwhoami && fid && fenv && flscmd && fgrep && ftr && fcut && fsort && funiq && ffind && fxargs && fsed && fawk && ftail && fchown && fchgrp && fgrepi && fgrepv && fgrepn && fgrepc && fheadn && ftailn && fcutdf && fsortr && fsortu && funiqc && funiqd && fwcl && fwcw && ffindname && fps && fkillall && fpgrep && fpkill && fnice && ftime && ftar && fgzip && fgunzip && fexprops && fpatternexp && fgetopts && feval && fshift && fpathexec && fhuge && fcompound_operands && floop_control && ftrap_signals && ffunc_return && fset_flags && fparam_assign_alt && ffd_redirs && fselect_loop && fproc_sub && fifs_splitting && farith_full && farith_cmd && fwhile_loop && fbrace_exp && fparam_ext && fansi_quote && fherestring && fnegation && fbackground && fruntime_params && ffunc_args && fcase_alt && ftest_ext && fecho_opts && fdquote_exp && frev && fnl && ftac && ffold && fbase64 && fprintf_full && fxxd && fcmp && fcksum && fseq && fyes && ffactor && fhostname && fnproc && fprintenv && freadlink && fln && ftruncate && fhead_full && fbig_input && ftail_full && ftail_follow && fwc_full && fcut_posix && fcut_full && ftr_full && ftr_posix && funiq_full && fsort_full && fsort_posix && fgrep_full && fgrep_regex && fgrep_rec && fls_full && fls_quote && fls_long && fls_rec && ffind_full && ffind_exec && ffind_regex && ffind_time && fxargs_full && fxargs_exec && fcp_full && fcp_tree && fmv_full && fmv_xdev && frm_full && fmkdir_full && frmdir_full && ftouch_full && fchmod_full && fchown_full; RETURN="${?}"; } || exit 1
 
 [ "${RETURN}" -eq 0 ] 2>/dev/null || printf "%s\n" "${RETURN}"
