@@ -3,7 +3,7 @@
 A compiler that turns shell scripts into standalone statically linked `ELF64` executables for `Linux` on the `x86_64` architecture. It translates shell command lines, functions, arithmetic, pipelines and control flow straight into native machine code and raw kernel system calls, embeds them in an `ELF` binary, and handles process control without relying on an external shell or interpreter.
 
 ## How it works
- 
+
 The POSIX shell is not a fast language. Every invocation parses text, forks subprocesses to evaluate command substitutions, and interprets variable expansions at runtime. sh2elf compiles a shell script once and produces a native ELF64 binary that the Linux kernel can execute directly. All control flow becomes native branches. All I/O goes through inline system call sequences. Variable state lives in a BSS hashtable. Pipelines are implemented with `fork`, `pipe`, and `dup2` at the call site, emitted as machine code. The result runs 11.28x faster than bash on a comprehensive benchmark exercising the full supported language, carries no shared library dependencies, and communicates with the kernel exclusively through raw Linux system calls.
 
 ## Quick Start
@@ -56,7 +56,7 @@ gcc main.c script.o -o binary
 
 ## Supported shell subset
 
-The source language is intentionally tiny. Anything outside the rules below is rejected with a parse error or left uninterpreted.
+Anything outside the rules below is rejected with a parse error or left uninterpreted.
 
 - **Command layout**: commands are separated by newlines or `;`. Blank lines are ignored. Trailing `|` entries are rejected.
 
@@ -95,94 +95,6 @@ The source language is intentionally tiny. Anything outside the rules below is r
   - ANSI-C quoting `$'...'` (`\n \t \xHH \NNN \e \cX ...`) and tilde expansion (`~`, `~/path`, `~user`, after `=` and `:` in assignments).
   - Runtime special parameters `$?`, `$$`, `$!`, `$PPID`, `$RANDOM`, `$#`, `$0`..`$9`, `$@`, `$*`, read from the kernel or from the entry stack when the binary runs, and usable inside double quotes, `echo`, `printf`, `test`, `exit` and external command arguments.
 
-- **Built-ins**:
-  - `echo` prints its arguments separated by single spaces and appends a newline (supports `-n`, `-e`, `-E`).
-  - `cd` changes to the provided directory (`cd DIR`). Missing arguments are ignored.
-  - `pwd` prints the current working directory via `sys_getcwd`.
-  - `true` exits with status 0.
-  - `false` exits with status 1.
-  - `mkdir` creates a directory (`mkdir DIR`) via `sys_mkdir`.
-  - `rmdir` removes empty directories (every GNU coreutils 9.10 option: `-p`/`--parents`, `--ignore-fail-on-non-empty`, `-v`); same messages (including the trailing-slash symlink case), exit status and non-empty detection as GNU `rmdir`; 2000 calls run in 0.08s vs 2.1s.
-  - `rmdir` removes an empty directory (`rmdir DIR`) via `sys_rmdir`.
-  - `unlink` deletes a file (`unlink FILE`) via `sys_unlink`.
-  - `sleep` pauses execution for N seconds (`sleep N`) via `sys_nanosleep`.
-  - `test` / `[` / `[[` evaluate the full expression grammar: file checks (`-e -f -d -s -r -w -x -L -h -p -S -b -c -g -u -k -O -G -t`) via `sys_newfstatat`, `sys_faccessat2` and `sys_ioctl`, file comparisons (`-nt -ot -ef`), strings (`-z -n = == != < >`), integers (`-eq -ne -gt -ge -lt -le`), `!`, `-a`, `-o`, parentheses, and in `[[ ]]` also `&&`, `||`, glob matching with `==` and regex matching with `=~`. Constant expressions are folded at compile time.
-  - `export` sets environment variables (`export VAR=VAL`).
-  - `cat` streams file or stdin contents via `sys_read` and `sys_write`.
-  - `head` outputs the initial portion of files (supports `-n [-]N`, `-c [-]N` with `b kB K MB M GB G ...` suffixes, legacy `-N`, `-q`, `-v`, `-z`, multiple files with headers); positive counts stream 64 KiB chunks scanned with SSE2 `pcmpeqb`/`pmovmskb`/`popcnt` and `lseek` back unread input.
-  - `wc` counts lines, words, characters, bytes and the maximum display width (supports `-l -w -m -c -L`, `--total=auto|always|only|never`, `--files0-from`, GNU column widths); 64 KiB streaming with an SSE2 path that counts newlines, characters and word starts from byte masks with `popcnt`, an exact UTF-8 decoder for non-ASCII blocks, `wcwidth` ranges taken from glibc at compile time for `-L`, and `sys_fstat` for `-c` on regular files.
-  - `kill` sends signals (`kill -SIG PID`) via `sys_kill`.
-  - `touch` creates or updates files (`touch FILE`) via `sys_openat`.
-  - `touch` changes file timestamps (every GNU coreutils 9.10 option: `-a`, `-c`, `-d`/`--date` with the full `parse_datetime` grammar including `TZ="..."` prefixes, `-f`, `-h`, `-m`, `-r`, `-t` with the POSIX `[[CC]YY]MMDDhhmm[.ss]` form, `--time`, the obsolete leading timestamp operand); relative dates are evaluated at run time against the current time or the `-r` file, glibc `mktime` offset caching is ported so ambiguous DST times resolve like GNU, and messages and exit status match GNU `touch`; 2000 calls run in 0.07s vs 2.1s.
-  - `chmod` modifies file permissions (`chmod MODE FILE`) via `sys_chmod`.
-  - `chmod` changes file modes (every GNU coreutils 9.10 option: octal and symbolic `MODE[,MODE]...` including `X`, `s`, `t` and `u`/`g`/`o` copies, the `-w`-style mode options with their umask surprise warning, `-c`, `-f`, `-v`, `-R` with `-H`/`-L`/`-P`, `--dereference`/`-h`, `--reference`, `--preserve-root`); ports of gnulib `mode_compile`/`mode_adjust` over a gnulib-`fts`-ordered walk (inode-sorted large directories, `fchmodat2` for symlinks) give the same messages, resulting modes and exit status as GNU `chmod`; 2000 calls run in 0.05s vs 2.0s.
-  - `basename` extracts the trailing component of a path (`basename PATH [SUFFIX]`).
-  - `dirname` extracts the directory component of a path (`dirname PATH`).
-  - `printf` formats and prints text (`printf FMT ARGS`) with flags, width, precision, `*`, conversions `d i o u x X c s b e f g E G a %`, all backslash escapes including `\NNN`, `\xHH`, `\uHHHH`, and format reuse while arguments remain.
-  - `read` reads input from stdin (`read VAR`).
-  - `unset` unsets an environment variable (`unset VAR`).
-  - `cp` copies a file (`cp SRC DST`).
-  - `mv` moves or renames a file (`mv SRC DST`).
-  - `rm` removes files and directory trees (every GNU coreutils 9.10 option: `-d`, `-f`, `-i`, `-I`, `--interactive[=WHEN]`, `--one-file-system`, `--preserve-root[=all]`/`--no-preserve-root`, `-r`/`-R`, `-v`); a port of `remove.c` over a gnulib-`fts`-ordered walk with the same prompts (write-protected, descend-into, inaccessible), `.`/`..`/`/` refusals, mount-point handling and diagnostics as GNU `rm`; 2000 calls run in 0.08s vs 2.0s and tree removals are slightly faster.
-  - `mkdir` creates directories (every GNU coreutils 9.10 option: `-m MODE` with octal and symbolic modes, `-p`, `-v`, `-Z`/`--context`); ports of gnulib `mode_compile`/`mode_adjust`, `make_dir_parents`, `mkancesdirs`, `dirchownmod` and `savewd` give the same umask handling, permissions, messages and exit status as GNU `mkdir`, while the script's umask and working directory are restored afterwards; 2000 calls run in 0.09s vs 2.8s.
-  - `rm` removes a file (`rm FILE`).
-  - `tee` duplicates input to stdout and a file (`tee FILE`).
-  - `expr` evaluates arithmetic expressions and comparisons (`+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`).
-  - `trap` registers signal actions (`trap CMD SIG`).
-  - `uname` prints system information via `sys_uname` (syscall 63).
-  - `whoami` prints current user name via `sys_getuid` (syscall 102).
-  - `id` prints user and group IDs via `sys_getuid`.
-  - `env` prints environment variables.
-  - `ls` lists directory contents (every GNU coreutils 9.10 option: `-aAbBcCdfFgGhHiIklLmnNopqQrRsStTuUvwxXZ1`, `--color`, `--hyperlink`, `--dired`, `--zero`, `--time-style`, `--time`, `--sort`, `--format`, `--quoting-style`, `--indicator-style`, `--block-size`, `--si`, `--hide`, `--group-directories-first`, `--author`, abbreviated long options, all GNU diagnostics and exit codes); output is byte-identical to GNU `ls`: gnulib quoting styles, glibc `strcoll` name order, `LS_COLORS`, tty-dependent defaults decided at runtime, column layout with tabs, `human_readable` sizes, ACL/SELinux markers via xattrs, and `strftime` time styles compiled to bytecode with a time-zone table built at compile time. `statx` is done relative to the open directory fd and `-l` is about 25% faster than GNU `ls`.
-  - `grep` searches files, stdin or directory trees (supports `-E`, `-F`, `-G`, `-e`, `-f`, `-i`, `-y`, `-v`, `-w`, `-x`, `-c`, `-l`, `-L`, `-q`, `-s`, `-m`, `-o`, `-b`, `-n`, `-H`, `-h`, `-T`, `-Z`, `-z`, `-a`, `-I`, `-U`, `-A`/`-B`/`-C`/`-NUM`, `--color`, `--label`, `--binary-files`, `-d`, `-D`, `-r`, `-R`, `--include`, `--exclude`, `--exclude-from`, `--exclude-dir`, `--group-separator`, `--line-buffered`, abbreviated long options, all GNU diagnostics); matches GNU grep 3.12 exactly: a port of the glibc regex parser (BRE/ERE, back-references, intervals, classes, `[=a=]` and collation-order ranges from the en_US.UTF-8 tables, `\< \> \b \B \w \s`) compiled into a context-aware character DFA at compile time, GNU's `-w` retry loop, binary-file and encoding-error handling per 96 KiB read; runtime is an SSE2 required-literal search, an SSSE3 `pshufb` skip over bytes that cannot start a match and a byte-indexed DFA, with a backtracker only for back-references. Patterns from `-f FILE` are read at compile time.
-  - `tr` translates, deletes and squeezes characters (supports `-c`, `-C`, `-d`, `-s`, `-t`, escapes, `\ooo`, ranges, `[:class:]`, `[=c=]`, `[c*n]`, `[c*]`, case conversion, all GNU diagnostics); byte mode matches GNU with SSE2 range-shift, table and squeeze-run paths, and per POSIX `-C`, multibyte operands and character classes switch to UTF-8 character mode with glibc `isw*`/`tow*` tables built at compile time and an SSE2 path for ASCII blocks.
-  - `cut` selects bytes, characters or fields (supports `-b`, `-c`, `-f`, `-d`, `-s`, `-n`, `-z`, `--complement`, `--output-delimiter`, comma or blank separated lists); follows POSIX for `-c` (UTF-8 characters), `-n` (no split characters) and multibyte `-d`, GNU for everything else; streams 64 KiB reads, and single-byte field splitting walks a combined delimiter/newline SSE2 bitmask with `bsf`.
-  - `sort` sorts, merges and checks lines (supports `-b`, `-d`, `-f`, `-g`, `-h`, `-i`, `-M`, `-n`, `-R`, `-V`, `-r`, `-k`, `-t`, `-u`, `-s`, `-z`, `-c`, `-C`, `-m`, `-o`, `--sort=`, `--check=`, `--random-source`, `--files0-from`, obsolete `+POS1 -POS2`, all GNU diagnostics); text order is an exact port of glibc `strcoll` for en_US.UTF-8 (weight tables extracted at compile time, contractions excepted), and POSIX is followed for `-k` character offsets, `-d`/`-i`/`-f` on UTF-8 characters and multibyte `-t`; bottom-up merge sort over 32-byte items that cache the first key span and an order-preserving 64-bit key prefix (collation L1, numeric, human, month, general-numeric), so most comparisons are a single integer compare.
-  - `uniq` filters adjacent repeated lines (supports `-c`, `-d`, `-u`, `-D`, `--all-repeated=none|prepend|separate`, `--group=separate|prepend|append|both`, `-f`, `-s`, `-w`, `-i`, `-z`, obsolete `-N`/`+N`, input and output file operands); `-s`/`-w` count UTF-8 characters and fields split on Unicode blanks; streaming 64 KiB reads with SSE2 line splitting and 16-byte key comparison.
-  - `find` searches directory hierarchies (every GNU findutils 4.11.0 option, test and action: `-H/-L/-P`, `-D`, `-O0..3`, `-depth`, `-maxdepth`, `-xdev`, `-files0-from`, `-regextype`, all name/path/type/size/perm/time/owner tests, `-newerXY` with gnulib `parse_datetime` dates, `-regex` in every syntax, `-printf`/`-fprintf`/`-ls`/`-fls`/`-print0`, `-exec`/`-execdir`/`-ok`/`-okdir` with `{} +` batching, `-delete`, `-prune`, `-quit`); a port of GNU's parser and cost/rate optimizer runs at compile time, the runtime emulates gnulib `fts` ordering and error handling, regexes compile to DFAs (backtracking only for back-references), and output, diagnostics, `-D` traces and exit codes are byte-identical to GNU `find`; it is faster on every measured workload (on a 516k-entry `/usr`: plain walk 0.59s vs 0.96s, `-ls` 3.0s vs 4.0s, `-regex` 0.65s vs 2.76s).
-  - `xargs` builds and runs command lines from input (every GNU findutils 4.11.0 option: `-0`, `-a`, `-d`, `-E`/`-e`, `-I`/`-i`, `-L`/`-l`, `-n`, `-o`, `-p`, `-P` with SIGUSR1/SIGUSR2, `-r`, `-s`, `-t`, `-x`, `--process-slot-var`, `--show-limits`); GNU quote/backslash/blank parsing, the `buildcmd` size limits derived from the stack rlimit and environment, `{}` replacement, exit codes 123-127, the errno pipe from the child, and repositioning of a seekable stdin at exit are all reproduced, with output, diagnostics and exit status byte-identical to GNU `xargs` and 15-30% faster.
-  - `cp` copies files and directory trees (every GNU coreutils 9.10 option: `-a`, `-b`/`--backup` with simple/numbered/existing and `-S`, `-d`, `-f`, `-H`/`-L`/`-P`, `-i`, `-l`, `-n`, `-p`/`--preserve`/`--no-preserve`, `-r`, `-s`, `-t`/`-T`, `-u`/`--update`, `-v`, `-x`, `--attributes-only`, `--copy-contents`, `--debug`, `--keep-directory-symlink`, `--parents`, `--reflink`, `--remove-destination`, `--sparse`, `--strip-trailing-slashes`); a port of GNU's `copy.c` with FICLONE / `copy_file_range` / SEEK_HOLE sparse copying, hard-link preservation, same-file and just-created checks, ACL and xattr preservation (honouring `/etc/xattr.conf`), `utimecmp` timestamp resolution probing and buffered `-i` prompts, with output, diagnostics, resulting trees and exit status identical to GNU `cp`; tree copies are at parity or slightly faster (kernel-bound) and scripts calling `cp` repeatedly run about 25x faster (2000 calls: 0.13s vs 3.2s).
-  - `mv` moves and renames files (every GNU coreutils 9.10 option: `-b`/`--backup` with `-S`, `--debug`, `--exchange`, `-f`, `-i`, `-n`, `--no-copy`, `--strip-trailing-slashes`, `-t`/`-T`, `-u`/`--update`, `-v`, `-Z`); it shares the `cp` engine running `copy.c` in move mode (`RENAME_NOREPLACE`/`RENAME_EXCHANGE`, the up-front two-operand rename, tty-dependent overwrite prompts, same-file rules) and, for cross-device moves, copies with full attribute preservation and then removes the source with a port of `remove.c` over a gnulib-`fts`-ordered walk; output, diagnostics and exit status are identical to GNU `mv`, 2000 renames run in 0.07s vs 3.1s and cross-device tree moves are about 30% faster.
-  - `sed` performs stream editing on text streams.
-  - `awk` performs pattern scanning and processing on text streams.
-  - `tail` outputs the last part of files (supports `-n [+-]N`, `-c [+-]N` with size suffixes, legacy `+N`/`-N[bcl][f]`, `-q`, `-v`, `-z`, headers); regular files are read backwards from the end with `sys_pread64` and an SSE2 `pcmpeqb`/`bsr` scan, then sent with zero-copy `sys_sendfile`. Follow mode `-f`, `-F`, `--follow=name|descriptor`, `--retry`, `-s SEC`, `--pid=PID` polls with `sys_fstat`/`sys_newfstatat`, detects truncation and replaced files, and ends when the watched process exits.
-  - `chown` changes file ownership natively via `sys_chown` (syscall 92).
-  - `chgrp` changes file group ownership natively via `sys_chown` (syscall 92).
-  - `chown` / `chgrp` change file ownership (every GNU coreutils 9.10 option: `OWNER[:[GROUP]]`, `:GROUP`, `OWNER:` login group, the legacy `.` separator warning, numeric and `+`-prefixed ids, `--from`, `--reference`, `-c`, `-f`, `-v`, `-h`/`--dereference`, `-R` with `-H`/`-L`/`-P`, `--preserve-root`); ports of gnulib `parse_user_spec` (names looked up in `/etc/passwd` and `/etc/group` when the binary runs, so chroots and containers resolve like GNU) and of `chown-core.c` over a gnulib-`fts`-ordered post-order walk (`FTS_NOSTAT` shortcuts, the open+fstat+fchown path for `--from`) give the same messages, ownership and exit status as GNU; 2000 calls run in 0.10s vs 2.4s.
-  - `ps` inspects processes natively by scanning `/proc` using `sys_getdents64`.
-  - `killall` signals processes matching specified target names via `sys_kill`.
-  - `pgrep` searches active processes natively from `/proc`.
-  - `pkill` signals matching processes natively from `/proc` via `sys_kill`.
-  - `nice` sets process scheduling priority natively.
-  - `time` measures execution timing natively.
-  - `tar` archives/extracts streaming data natively via streaming syscalls.
-  - `gzip` compresses streaming input to stdout natively via streaming syscalls.
-  - `gunzip` decompresses streaming input to stdout natively via streaming syscalls.
-  - `getopts` parses command-line flags and option arguments.
-  - `eval` evaluates command string parameters dynamically.
-  - `local` declares function-scoped local variables.
-  - `return` exits from a function with an optional return status.
-  - `exit` terminates the program with the last status or with `exit N`.
-  - `:` does nothing and succeeds.
-  - `wait` waits for background jobs (`wait`, `wait PID`).
-  - `rev` reverses the characters of every line, UTF-8 aware, per file (supports `-0`).
-  - `tac` prints files in reverse record order (supports `-b`, `-s SEP`).
-  - `nl` numbers lines (supports `-b -h -f` styles `a t n`, `-n ln|rn|rz`, `-w`, `-s`, `-v`, `-i`, `-l`, `-p`, `-d`, logical page sections).
-  - `fold` wraps lines by display columns with UTF-8 and double width characters (supports `-w`, `-s`, `-b`, `-N`).
-  - `base64` encodes and decodes (supports `-d`, `-i`, `-w COLS`).
-  - `xxd` makes hex dumps (supports `-c -g -u -s -l -o -a -e -b -p -i -r`, including `-r -p`).
-  - `cmp` compares files byte by byte (supports `-b`, `-l`, `-s`, `-n`, `-i SKIP1:SKIP2`, skip operands, stdin as `-`).
-  - `cksum` prints checksums with the `crc`, `crc32b`, `sysv` and `bsd` algorithms (`-a ALG`).
-  - `seq` prints number sequences (supports `-s`, `-w`, `-f`, negative and floating steps).
-  - `yes` repeats a line through a pre-filled 8 KiB `sys_write` loop.
-  - `factor` factors 64-bit integers with trial division, Miller-Rabin and Pollard rho (supports `-h`, reads stdin without operands).
-  - `hostname` prints or sets the host name via `sys_uname` and `sys_sethostname` (supports `-s`, `-d`).
-  - `nproc` counts usable CPUs via `sys_sched_getaffinity` (supports `--all`, `--ignore=N`).
-  - `printenv` prints environment variables read from the entry stack (supports `-0`).
-  - `readlink` prints link targets and canonical paths (supports `-f`, `-e`, `-m`, `-n`, `-z`, `-v`, `-q`).
-  - `ln` creates hard and symbolic links via `sys_linkat` and `sys_symlinkat` (supports `-s`, `-f`, `-n`, `-v`, `-T`, `-t DIR`, target directories).
-  - `truncate` shrinks or extends files via `sys_ftruncate` (supports `-s` with `+ - < > / %` and `K M G T P E` / `KB` / `KiB` suffixes, `-c`, `-o`, `-r RFILE`).
-
 - **External commands**: names containing `/` are executed verbatim. Otherwise the compiler checks `/bin/NAME`, `/usr/bin/NAME`, `/usr/local/bin/NAME`, `/sbin/NAME`, and `/usr/sbin/NAME` sequentially. The runtime passes an empty environment (`envp` terminates with NULL).
 
 - **Tokenisation & quoting**:
@@ -191,6 +103,90 @@ The source language is intentionally tiny. Anything outside the rules below is r
   - Single quotes (`'literal'`) preserve characters verbatim until the matching `'`.
   - Double quotes recognise `"`, `\`, `\$`, and ``\` `` escapes; all other backslash pairs keep the backslash (e.g. `"Hello\n"` stays `Hello\n`).
   - Newlines inside double quotes can be escaped with `\` + newline (line continuation).
+
+## Built-in tools
+
+Every tool below is compiled natively into the output binary. No external program is spawned.
+
+| Tool | Description |
+| :--- | :--- |
+| `echo` | Prints arguments separated by single spaces (`-n`, `-e`, `-E`). |
+| `cd` | Changes the working directory. |
+| `pwd` | Prints the working directory via `sys_getcwd`. |
+| `true` / `false` | Exit with status 0 / 1. |
+| `:` | Does nothing and succeeds. |
+| `test` / `[` / `[[` | Full expression grammar: file checks, file comparisons, string and integer tests, `!`, `-a`, `-o`, parentheses, and in `[[ ]]` also `&&`, `||`, glob `==` and regex `=~`. Constant expressions are folded at compile time. |
+| `export` | Sets environment variables. |
+| `unset` | Unsets a variable. |
+| `read` | Reads input from stdin into a variable. |
+| `printf` | Formatted output with flags, width, precision, `*`, conversions `d i o u x X c s b e f g E G a %`, all backslash escapes, and format reuse. |
+| `getopts` | Parses command-line flags and option arguments. |
+| `eval` | Evaluates command strings dynamically. |
+| `local` | Declares function-scoped variables. |
+| `return` | Exits a function with an optional status. |
+| `exit` | Terminates the program with the last status or `exit N`. |
+| `trap` | Registers signal actions. |
+| `wait` | Waits for background jobs (`wait`, `wait PID`). |
+| `sleep` | Pauses for N seconds via `sys_nanosleep`. |
+| `time` | Measures execution timing. |
+| `nice` | Sets process scheduling priority. |
+| `kill` | Sends signals via `sys_kill`. |
+| `killall` | Signals processes matching target names. |
+| `pgrep` | Searches running processes via `/proc`. |
+| `pkill` | Signals processes matching a pattern via `/proc`. |
+| `ps` | Inspects processes by scanning `/proc` with `sys_getdents64`. |
+| `cat` | Streams files or stdin to stdout. |
+| `tee` | Duplicates input to stdout and files. |
+| `head` | Outputs the first part of files (`-n`, `-c`, `-q`, `-v`, `-z`, legacy `-N`, size suffixes). |
+| `tail` | Outputs the last part of files, with follow mode (`-n`, `-c`, `-f`, `-F`, `--retry`, `-s`, `--pid`). |
+| `tac` | Prints files in reverse record order (`-b`, `-s`). |
+| `rev` | Reverses the characters of each line, UTF-8 aware (`-0`). |
+| `wc` | Counts lines, words, characters, bytes and max line width (`-l -w -m -c -L`, `--files0-from`, `--total`). |
+| `nl` | Numbers lines (`-b -h -f -n -w -s -v -i -l -p -d`). |
+| `fold` | Wraps lines by display columns (`-w`, `-s`, `-b`). |
+| `cut` | Selects bytes, characters or fields (`-b -c -f -d -s -n -z`, `--complement`, `--output-delimiter`). |
+| `tr` | Translates, deletes and squeezes characters (`-c -C -d -s -t`, classes, ranges, escapes). |
+| `sort` | Sorts, merges and checks lines (`-b -d -f -g -h -i -M -n -R -V -r -k -t -u -s -z -c -C -m -o`). |
+| `uniq` | Filters adjacent repeated lines (`-c -d -u -D -f -s -w -i -z`, `--group`). |
+| `grep` | Searches files, stdin or trees (`-E -F -G`, context, color, recursion, include/exclude, binary-file handling). |
+| `sed` | Stream editing on text. |
+| `awk` | Pattern scanning and processing on text. |
+| `find` | Searches directory hierarchies with the full test and action set, including `-exec`, `-printf`, `-regex`, `-delete`, `-prune`. |
+| `xargs` | Builds and runs command lines from input (`-0 -a -d -E -I -L -n -o -p -P -r -s -t -x`). |
+| `ls` | Lists directory contents with the full option set, color, quoting styles, and time styles. |
+| `cp` | Copies files and trees with the full option set (`-a -b -d -f -i -l -n -p -r -s -t -T -u -v -x`, `--reflink`, `--sparse`). |
+| `mv` | Moves and renames files with the full option set (`-b -f -i -n -t -T -u -v`, `--exchange`, `--no-copy`). |
+| `rm` | Removes files and trees (`-d -f -i -I -r -R -v`, `--one-file-system`, `--preserve-root`). |
+| `mkdir` | Creates directories (`-m`, `-p`, `-v`, `-Z`). |
+| `rmdir` | Removes empty directories (`-p`, `--ignore-fail-on-non-empty`, `-v`). |
+| `unlink` | Deletes a file via `sys_unlink`. |
+| `ln` | Creates hard and symbolic links (`-s -f -n -v -T -t`). |
+| `readlink` | Prints link targets and canonical paths (`-f -e -m -n -z -v -q`). |
+| `touch` | Creates files or updates timestamps (`-a -c -d -f -h -m -r -t`, `--time`). |
+| `truncate` | Shrinks or extends files (`-s` with relative modes and size suffixes, `-c`, `-o`, `-r`). |
+| `chmod` | Changes file modes, octal and symbolic (`-c -f -v -R -H -L -P`, `--reference`). |
+| `chown` | Changes file ownership (`--from`, `--reference`, `-c -f -v -h -R -H -L -P`). |
+| `chgrp` | Changes file group ownership (same options as `chown`). |
+| `basename` | Extracts the trailing path component (`basename PATH [SUFFIX]`). |
+| `dirname` | Extracts the directory component of a path. |
+| `tar` | Archives and extracts streaming data. |
+| `gzip` | Compresses streaming input to stdout. |
+| `gunzip` | Decompresses streaming input to stdout. |
+| `base64` | Encodes and decodes (`-d`, `-i`, `-w`). |
+| `xxd` | Makes hex dumps and reverses them (`-c -g -u -s -l -o -a -e -b -p -i -r`). |
+| `cmp` | Compares files byte by byte (`-b -l -s -n -i`). |
+| `cksum` | Prints checksums (`-a` with `crc`, `crc32b`, `sysv`, `bsd`). |
+| `expr` | Evaluates arithmetic expressions and comparisons. |
+| `seq` | Prints number sequences (`-s -w -f`, negative and floating steps). |
+| `yes` | Repeats a line through a pre-filled 8 KiB write loop. |
+| `factor` | Factors 64-bit integers (trial division, Miller-Rabin, Pollard rho). |
+| `uname` | Prints system information via `sys_uname`. |
+| `hostname` | Prints or sets the host name (`-s`, `-d`). |
+| `nproc` | Counts usable CPUs (`--all`, `--ignore`). |
+| `whoami` | Prints the current user name via `sys_getuid`. |
+| `id` | Prints user and group IDs. |
+| `env` | Prints environment variables. |
+| `printenv` | Prints environment variables read from the entry stack (`-0`). |
 
 ## Architecture and Specs
 
@@ -201,7 +197,7 @@ The source language is intentionally tiny. Anything outside the rules below is r
 * **IFS-aware Word Splitting**: In-place argument splitting on IFS characters to generate argument arrays.
 * **Pattern Expansions and Substitutions**: Support for `${VAR#pat}`, `${VAR##pat}`, `${VAR%pat}`, `${VAR%%pat}`, `${VAR/pat/repl}`, and `${VAR//pat/repl}`.
 * **Numeric FD Redirections**: Full support for `N>&M`, `N<&M`, and closing `N>&-` via `sys_dup2` and `sys_close`.
-* **Tool Runtime**: The new tools stream input with 64 KiB `sys_read` chunks into a 1 TiB region reserved at a fixed address by `sys_mmap` with `MAP_NORESERVE | MAP_FIXED_NOREPLACE` (only touched pages cost memory, with a 1 GiB fallback under strict overcommit) and write through a 64 KiB output buffer flushed by an inline `flush` routine; each tool body is hand written x86_64 machine code emitted with `c8`.
+* **Tool Runtime**: The built-in tools stream input with 64 KiB `sys_read` chunks into a 1 TiB region reserved at a fixed address by `sys_mmap` with `MAP_NORESERVE | MAP_FIXED_NOREPLACE` (only touched pages cost memory, with a 1 GiB fallback under strict overcommit) and write through a 64 KiB output buffer flushed by an inline `flush` routine; each tool body is hand written x86_64 machine code emitted with `c8`.
 * **Execution Flags**: Builtin codegen for `set -e`, `set -u`, and `set -x`.
 * **Loop Depth Controls**: Compile-time jump backpatching stack for multi-level `break N` and `continue N`.
 * **Select Loops**: Interactive menu generation and stdin evaluation.
@@ -230,15 +226,6 @@ The source language is intentionally tiny. Anything outside the rules below is r
 * **Source Merging**: Sourced script inclusion and symbol table merging at link time.
 * **LSP Integration**: Standalone language server `sh2elf-lsp` for real-time IDE diagnostics and hover details.
 * **Formal Semantics Paper**: Comprehensive formal denotational semantics document in `docs/semantics.md`.
-
-## Performance Benchmark
-
-Benchmarked on a comprehensive 130+ line script exercising every POSIX language construct:
-
-| Execution Method | Total Time (50 runs) | Average Run Time | Relative Speed |
-| :--- | :--- | :--- | :--- |
-| **Interpreted Bash** | 3.668 s | 73.3 ms | 1.0x (Baseline) |
-| **sh2elf Binary** | **0.325 s** | **6.5 ms** | **11.28x FASTER** |
 
 ## Testing
 
