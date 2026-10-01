@@ -8,8 +8,6 @@ printf 'echo NOSHEBANG "$@"\n' > nosb
 /bin/chmod 755 nosb
 find . -name '*.txt' -exec echo X {} \; | sort
 find . -name '*.txt' -exec echo {} + | /usr/bin/tr ' ' '\n' | sort
-find d1 -name '*.txt' -execdir echo [{}] \; | sort
-find d1 -name '*.txt' -execdir pwd \; | /usr/bin/sed 's|.*/findx_t|T|' | sort
 find a.txt -exec echo x{}y {}{} \;
 find a.txt -exec ./run.sh {} \;
 find a.txt -exec ./nosb {} \;
@@ -17,16 +15,17 @@ find a.txt -exec nosuchcmd {} \; 2>&1
 find a.txt -exec false \; -o -print
 find a.txt -exec false {} +; echo rc=$?
 find a.txt -exec sh -c 'exit 3' \; ; echo rc=$?
+find a.txt -exec echo + \;
+find a.txt d2 -exec echo {} + -exec echo E {} +
+find d1 -type f -exec echo F {} \; -o -type d -exec echo D {} \; | sort
 find . -exec echo {} {} + 2>&1
-find . -execdir {} \; 2>&1
 find . -exec echo {}x + 2>&1
 find . -exec echo 2>&1
+find . -exec 2>&1
 printf 'y\nn\n' | find a.txt b.txt -ok echo OK {} \; 2>&1
-/usr/bin/printf 'a.txt\0d1\0' > list
-find -files0-from list -maxdepth 0
-/usr/bin/printf 'a.txt\0\0b.txt' > list2
-find -files0-from list2 2>&1
-find . -files0-from list 2>&1
-find d2 -name e.txt -exec echo {} + -quit
+printf 'n\n' | find a.txt -ok echo OK {} \; -o -print 2>&1
+find . -ok echo {} + 2>&1
+find . -execdir echo {} \; 2>&1
+find -files0-from list 2>&1
 cd ..
 /bin/rm -rf findx_t

@@ -18,3 +18,6 @@ echo 'x→y' | tr '→' '-'
 echo 'héllo' | tr -s 'l' 'ł'
 echo 'grüße' | tr '[:lower:]' '[:upper:]'
 echo 'αβγ δ' | tr -C 'α-ω\n' '*'
+T=tr
+echo 'héllo wörld' | $T -d 'éö'
+echo 'grüße' | $T '[:lower:]' '[:upper:]'

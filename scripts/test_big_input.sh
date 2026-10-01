@@ -7,6 +7,6 @@ tac $F | cksum
 rev $F | cksum
 nl $F | cksum
 fold -w 5 $F | cksum
-head -n -3 $F | cksum
+head -n 10999997 $F | cksum
 base64 $F | base64 -d | cmp - $F && echo "roundtrip-ok"
 rm -f $F

@@ -1,1 +1,1 @@
-find /tmp -maxdepth 1 -name '*.txt'
+find /tmp/. ! -name . -prune -name '*.txt'

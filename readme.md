@@ -137,36 +137,36 @@ Every tool below is compiled natively into the output binary. No external progra
 | `ps` | Inspects processes by scanning `/proc` with `sys_getdents64`. |
 | `cat` | Streams files or stdin to stdout. |
 | `tee` | Duplicates input to stdout and files. |
-| `head` | Outputs the first part of files (`-n`, `-c`, `-q`, `-v`, `-z`, legacy `-N`, size suffixes). |
-| `tail` | Outputs the last part of files, with follow mode (`-n`, `-c`, `-f`, `-F`, `--retry`, `-s`, `--pid`). |
+| `head` | Outputs the first part of files; POSIX.1-2024 only (`-c number`, `-n number`). |
+| `tail` | Outputs the last part of a file; POSIX.1-2024 only (`-f`, `-c number`, `-n number` with `+`/`-` origin, `-r`). |
 | `tac` | Prints files in reverse record order (`-b`, `-s`). |
 | `rev` | Reverses the characters of each line, UTF-8 aware (`-0`). |
-| `wc` | Counts lines, words, characters, bytes and max line width (`-l -w -m -c -L`, `--files0-from`, `--total`). |
+| `wc` | Counts newlines, words, bytes or characters; POSIX.1-2024 only (`-c`, `-m`, `-l`, `-w`, POSIX output format). |
 | `nl` | Numbers lines (`-b -h -f -n -w -s -v -i -l -p -d`). |
 | `fold` | Wraps lines by display columns (`-w`, `-s`, `-b`). |
-| `cut` | Selects bytes, characters or fields (`-b -c -f -d -s -n -z`, `--complement`, `--output-delimiter`). |
-| `tr` | Translates, deletes and squeezes characters (`-c -C -d -s -t`, classes, ranges, escapes). |
-| `sort` | Sorts, merges and checks lines (`-b -d -f -g -h -i -M -n -R -V -r -k -t -u -s -z -c -C -m -o`). |
-| `uniq` | Filters adjacent repeated lines (`-c -d -u -D -f -s -w -i -z`, `--group`). |
+| `cut` | POSIX: selects bytes, characters or fields (`-b list [-n]`, `-c list`, `-f list [-d delim] [-s]`); `-c` counts UTF-8 characters. |
+| `tr` | POSIX: translates, deletes and squeezes characters (`-c -C -d -s`, ranges, escapes, `[:class:]`, `[=c=]`, `[x*n]`); UTF-8 aware. |
+| `sort` | POSIX: sorts, merges and checks lines (`-m -o -b -d -f -i -n -r -u -t -k -c -C`); en_US.UTF-8 collation built in, byte order when LC_ALL/LC_COLLATE/LANG is C, POSIX or C.* (or unset). |
+| `uniq` | POSIX: filters adjacent repeated lines (`-c|-d|-u`, `-f fields`, `-s chars`, optional output file); `-s` counts UTF-8 characters. |
 | `grep` | Searches files, stdin or trees (`-E -F -G`, context, color, recursion, include/exclude, binary-file handling). |
 | `sed` | Stream editing on text. |
 | `awk` | Pattern scanning and processing on text. |
-| `find` | Searches directory hierarchies with the full test and action set, including `-exec`, `-printf`, `-regex`, `-delete`, `-prune`. |
-| `xargs` | Builds and runs command lines from input (`-0 -a -d -E -I -L -n -o -p -P -r -s -t -x`). |
-| `ls` | Lists directory contents with the full option set, color, quoting styles, and time styles. |
-| `cp` | Copies files and trees with the full option set (`-a -b -d -f -i -l -n -p -r -s -t -T -u -v -x`, `--reflink`, `--sparse`). |
-| `mv` | Moves and renames files with the full option set (`-b -f -i -n -t -T -u -v`, `--exchange`, `--no-copy`). |
-| `rm` | Removes files and trees (`-d -f -i -I -r -R -v`, `--one-file-system`, `--preserve-root`). |
-| `mkdir` | Creates directories (`-m`, `-p`, `-v`, `-Z`). |
-| `rmdir` | Removes empty directories (`-p`, `--ignore-fail-on-non-empty`, `-v`). |
+| `find` | Searches directory hierarchies; POSIX.1-2024 only (`-H -L`; `! -a -o ( )`; `-name -iname -path -type -size -perm -links -user -group -nouser -nogroup -atime -ctime -mtime -newer -xdev -mount -depth -prune -print -print0 -exec -ok`). |
+| `xargs` | Builds and runs command lines from input; POSIX.1-2024 only (`-0 -E -I -L -n -p -r -s -t -x`). |
+| `ls` | Lists directory contents; POSIX.1-2024 options only (`-ikqrs -glno -A -a -C -m -x -1 -F -p -H -L -R -d -S -f -t -c -u`). |
+| `cp` | Copies files and trees; POSIX.1-2024 only (`-P -f -i -p -R -H -L`). |
+| `mv` | Moves and renames files and trees, across file systems too; POSIX.1-2024 only (`-i -f`). |
+| `rm` | Removes files and trees; POSIX.1-2024 only (`-d -f -i -R -r -v`). |
+| `mkdir` | Creates directories; POSIX.1-2024 only (`-p`, `-m mode`). |
+| `rmdir` | Removes empty directories; POSIX.1-2024 only (`-p`). |
 | `unlink` | Deletes a file via `sys_unlink`. |
 | `ln` | Creates hard and symbolic links (`-s -f -n -v -T -t`). |
 | `readlink` | Prints link targets and canonical paths (`-f -e -m -n -z -v -q`). |
-| `touch` | Creates files or updates timestamps (`-a -c -d -f -h -m -r -t`, `--time`). |
+| `touch` | Creates files or updates timestamps; POSIX.1-2024 only (`-a -c -m`, `-r ref_file`, `-t time`, `-d date_time`). |
 | `truncate` | Shrinks or extends files (`-s` with relative modes and size suffixes, `-c`, `-o`, `-r`). |
-| `chmod` | Changes file modes, octal and symbolic (`-c -f -v -R -H -L -P`, `--reference`). |
-| `chown` | Changes file ownership (`--from`, `--reference`, `-c -f -v -h -R -H -L -P`). |
-| `chgrp` | Changes file group ownership (same options as `chown`). |
+| `chmod` | Changes file modes, octal and symbolic; POSIX.1-2024 only (`-R`). |
+| `chown` | Changes file ownership; POSIX.1-2024 only (`-h`, `-R` with `-H -L -P`, `owner[:group]`). |
+| `chgrp` | Changes file group ownership; POSIX.1-2024 only (same options as `chown`). |
 | `basename` | Extracts the trailing path component (`basename PATH [SUFFIX]`). |
 | `dirname` | Extracts the directory component of a path. |
 | `tar` | Archives and extracts streaming data. |
@@ -242,7 +242,7 @@ This verifies:
 
 ## Paper
 
-A formal treatment of the compiler architecture, memory model, pipeline semantics, and code generation is available in [`docs/sh2elf-paper.pdf`](./docs/sh2elf-paper.pdf). To rebuild the PDF from the LaTeX source, run:
+A formal treatment of the old compiler architecture, memory model, pipeline semantics, and code generation is available in [`docs/sh2elf-paper.pdf`](./docs/sh2elf-paper.pdf). To rebuild the PDF from the LaTeX source, run:
 
 ```sh
 sh docs/tex2pdf.sh docs/sh2elf-paper.tex

@@ -5,28 +5,22 @@ mkdir -p $D
 cd $D
 seq 20 > h1
 printf 'a\nb\nc' > h2
-tail -n 3 h1 h2
-echo "--"
+tail -n 3 h1
 tail -c 5 h1
 tail -n +18 h1
 tail -c +50 h1
-tail -3 h1
-tail +19 h1
+tail -n -3 h1
+tail -n3 h1
 tail -n 1 h2
 echo
-tail -q -n1 h1 h2
-echo
-tail -v -n1 h1
-tail -n1 nosuch h1 2>&1
+tail -n1 nosuch 2>&1
 echo rc=$?
-tail -n abc h1 2>&1
-echo rc=$?
-seq 30 | tail -n 2 - h2
-echo
-tail -c 1k h1 | cksum
-tail -n +0 h1 | head -2
+seq 30 | tail -n 2 -
+seq 30 | tail -n 2
+tail -c 1024 h1 | cksum
+tail -n +0 h1 | head -n 2
 printf '' | tail
-tail -5c h1
+tail -c5 h1
 mkdir -p dd
 tail dd 2>&1
 echo rc=$?
@@ -41,10 +35,38 @@ cat h3 | tail -n 3
 cat h3 | tail -c 7
 cat h3 | tail -n +99998
 tail -n 50000 h3 | cksum
-tail --lines=2 --quiet h1 h2
-echo
 tail -c +3 h2
 echo
 tail -n -2 h1
+tail -r h2
+tail -r -n 3 h1
+tail -rn 2 h3
+tail -r h3 | cksum
+seq 3 | tail -r
+tail -- h2
+echo
+tail h1 h2 2>&1
+echo rc=$?
+for o in -q -v -z -F -3 --lines=2 --pid=1; do
+	tail $o h1 2>&1
+	echo rc=$?
+done
+tail -c 2 -n 2 h1 2>&1
+echo rc=$?
+tail -r -c 2 h1 2>&1
+echo rc=$?
+tail -r -f h1 2>&1
+echo rc=$?
+tail -r -n +2 h1 2>&1
+echo rc=$?
+for n in 1k abc '' x+2; do
+	tail -n "$n" h1 2>&1
+	echo rc=$?
+done
+N=4
+tail -n "$N" h1
+F=h2
+tail -c 3 "$F"
+echo
 cd /tmp
 /bin/rm -rf $D

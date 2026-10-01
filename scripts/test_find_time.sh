@@ -7,19 +7,25 @@ cd findt_t
 /usr/bin/touch -d '2021-07-04 12:00:00.5' midns
 /usr/bin/touch -d '1969-07-20 20:17:40 UTC' moon
 /usr/bin/touch -d '2037-12-31 23:59:59' future
-find . -newermt '2020-01-02 03:04:05' ! -name . | sort
-find . -newermt '2020-01-02 03:04:04' ! -name . | sort
-find . -newermt '2021-07-04 12:00:00' ! -name . | sort
-find . -newermt '2021-07-04 16:00:00 UTC' ! -name . | sort
-find . -newermt '@1625400000' ! -name . | sort
-find . ! -newermt '1970-01-01' ! -name .
-find . -newermt '2021-07-04 12:00:00 +1 day' ! -name .
-find . -newermt 'Jul 4 2021 11:59:59' ! -name . | sort
-find . -newermt '2021-02-30' 2>&1
-find . -newermt 'garbage' 2>&1
-find . -newer old ! -name . | sort
-find . -anewer mid -name 'm*' | sort
+/usr/bin/touch fresh
+find . -newer old ! -name . ! -name fresh | sort
+find . -newer old2 ! -name . ! -name fresh | sort
+find . -newer mid ! -name . ! -name fresh | sort
+find . ! -newer mid ! -name . | sort
+find . -newer future ! -name .
 find . -mtime +1000 | sort
-find . ! -name . -printf '%p %TY %Tm %Td %TH %TM\n' | sort
+find . -mtime -1 | sort
+find . -name fresh -mtime 0
+find . -name fresh -mtime -1
+find . -name fresh -mtime +0
+find . -name future -mtime -0
+find . -name future -mtime 0
+find . -name old -mtime +2000 -atime +2000
+find . -ctime -1 | sort
+find . -ctime +0
+find . -mtime x 2>&1
+find . -newermt '2020-01-02' 2>&1
+find . -anewer old 2>&1
+find . -daystart -mtime 0 2>&1
 cd ..
 /bin/rm -rf findt_t

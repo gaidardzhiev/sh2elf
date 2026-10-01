@@ -1,1 +1,1 @@
-find /tmp -maxdepth 0
+find /tmp -prune

@@ -11,22 +11,25 @@ rmdir -k x 2>&1; echo rc=$?
 rmdir nonexist 2>&1; echo rc=$?
 rmdir file 2>&1; echo rc=$?
 rmdir e 2>&1; echo rc=$?
-rmdir --ignore-fail-on-non-empty e; echo rc=$?
-rmdir -v y
-rmdir -pv a/b/c
+for o in -v -k -x --parents --verbose --ignore-fail-on-non-empty --help --version; do
+	rmdir $o y 2>&1; echo rc=$?
+done
+rmdir -p 2>&1; echo rc=$?
+rmdir y
+rmdir -p a/b/c
 ls
 mkdir -p p/q/r
 rmdir -p p//q///r// ; ls
 mkdir -p e/h/i
-rmdir -pv e/h/i 2>&1; echo rc=$?
-mkdir -p e/h/i
-rmdir -pv --ignore-fail-on-non-empty e/h/i; echo rc=$?
+rmdir -p e/h/i 2>&1; echo rc=$?
+ls e
 ln -s e se
 rmdir se/ 2>&1; echo rc=$?
 rmdir se 2>&1; echo rc=$?
 rmdir file/ 2>&1; echo rc=$?
 rmdir . 2>&1; echo rc=$?
 mkdir 'sp ace' "q'uote"
-rmdir -v 'sp ace' "q'uote"
+rmdir 'sp ace' "q'uote"; ls
+rmdir 'sp ace' 2>&1; echo rc=$?
 cd /
 /bin/rm -rf $T

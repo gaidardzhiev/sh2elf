@@ -17,22 +17,28 @@ ln -s nowhere dangling
 ln a hard
 /usr/bin/touch -d @1234567890 a big huge exe sgid suid sticky
 /usr/bin/touch -h -d @1234567890 lnk dangling
-ls -lgG --time-style=+%s a big huge exe sgid suid sticky lnk dangling hard
-ls -lgG --time-style=+%s -h big huge
-ls -lgG --time-style=+%s --si big huge
-ls -lgG --time-style=+%s --block-size=1K big huge
-ls -lgG --time-style=+%s --block-size=M huge
-ls -lgG --time-style=+%s --block-size="'1" huge
-ls -lgG --time-style=+%s -F exe lnk dangling a
-ls -lgG --time-style=+%s -L lnk
-ls -lgG --time-style=+%s -i a hard | /bin/sed 's/^ *[0-9]* //'
-ls -lgG --time-style='+%s|%N|%3N|%-e|%%' a
-ls -lgG --time-style='+[%10s][%-10s][%010s]' a
-ls -og --time-style=+%s a
-ls -l --time-style=+%s -n a | cut -d' ' -f1,2,5,6,7
-ls -lgG --time-style=+%s --sort=size a big huge exe
-ls -lgGr --time-style=+%s --sort=size a big huge exe
-ls -lgG --time-style=bogus a
+TZ=UTC ls -og a big huge exe sgid suid sticky lnk dangling hard
+TZ=UTC ls -og -F exe lnk dangling a
+TZ=UTC ls -og -p lnk a
+TZ=UTC ls -og -L lnk
+TZ=UTC ls -ogL lnk dangling 2>&1
 echo "rc=$?"
+TZ=UTC ls -og -i a hard | /bin/sed 's/^ *[0-9]* //'
+TZ=UTC ls -gon a
+TZ=UTC ls -og -S a big huge exe
+TZ=UTC ls -og -Sr a big huge exe
+TZ=UTC ls -og -t a big huge exe
+/usr/bin/touch -d '2001-02-03 04:05:06 UTC' big
+/usr/bin/touch -d '1969-12-31 23:59:59 UTC' huge
+TZ=UTC ls -og a big huge
+TZ=UTC ls -og -t a big huge
+TZ=UTC ls -og -rt a big huge
+TZ=Asia/Kolkata ls -og a big huge
+TZ=UTC ls -log a 2>&1
+echo "rc=$?"
+for o in -h --si --full-time --time-style=+%s --block-size=1K --author -lZ --time=ctime -D --dired --sort=size --numeric-uid-gid -lG; do
+	ls -og $o a 2>&1
+	echo "rc=$?"
+done
 cd ..
 /bin/rm -rf ls_l

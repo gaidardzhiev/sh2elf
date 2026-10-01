@@ -19,34 +19,52 @@ find . -name '*.txt'
 find . -iname 'ZETA' -o -name 'alpha'
 find . -type d | sort
 find . -type l | sort
-find . -xtype l
 find -L . -type l
-find . -maxdepth 1 -type f -size +1k
+find -H dl lnk dang -type l
+find -L dl -type d | sort
+find . ! -name . -prune -type f -size +1 | sort
 find . -size -2 -type f | sort
-find . -empty | sort
+find . -size 1234c
+find . -size +4999c -size -5001c
 find . -perm -u+x -type f
 find . -perm 600
+find . -perm -u=rw,g=r -type f | sort
+find . -links +2 -type d | sort
 find . -path './d1/*' -prune -o -type f -print | sort
 find d1 -depth
-find d1 -mindepth 2 -maxdepth 2
+find d1 -depth -name s1 -prune -o -print
+find d1/. ! -name . -prune
 find . -newer a.txt | sort
+find . ! -newer a.txt -type f | sort
 find . ! -type d -name '[a-z]*' | sort
 find . \( -name 'a*' -o -name 'b*' \) -type f | sort
-find d1 -printf '%p|%f|%h|%P|%d|%y|%s|%m|%M\n'
-find a.txt -printf '%t|%TY-%Tm-%Td %TH:%TM:%TS|%T@|%AF|%A+\n'
-find big.bin -printf '%10s|%-8f|%.3p|%k|%b|%S\n'
-find . -maxdepth 1 -name 'sp*' -printf '[%p]\n'
-find dl lnk dang -printf '%p -> %l %Y\n'
+find . -name 'a*' -o -name 'b*' -type f | sort
+find . ! \( -type d -o -type l \) -name '*i*' | sort
 find d1 -name f1 -print0 | /usr/bin/od -c | /usr/bin/head -2
-find d1 -quit -print
+find . -nouser -o -nogroup
+find a.txt -user 0 -o -print
 find nonexist 2>&1
+echo rc=$?
 find . -name 2>&1
+echo rc=$?
 find . -badpred 2>&1
+echo rc=$?
 find . -type q 2>&1
-find -D tree . -maxdepth 0 -name x -o -print 2>&1
-find -D search d2 2>&1 | sort
-find -O3 -D opt d1 -maxdepth 0 -type f -name x -size +1 2>&1
-find . -maxdepth 1 -name 'x~' -delete
-find . -maxdepth 1 -name 'x~'
+find . '(' -name a 2>&1
+find . -name a -o 2>&1
+find . -size 1k 2>&1
+find . -mtime 1.5 2>&1
+find . -perm /4000 2>&1
+find . -user no_such_user_x 2>&1
+echo rc=$?
+find . -newer nonexist 2>&1
+echo rc=$?
+find -HL dl -type d | sort
+for p in -maxdepth -mindepth -xtype -empty -printf -quit -delete -regex -ls -fprint -samefile -inum -newermt -mmin -true -false -not -and -or -execdir -okdir -files0-from -readable -lname -wholename -ipath -fstype; do
+	find . $p x 2>&1 | /usr/bin/head -1
+done
+find -D tree . 2>&1 | /usr/bin/head -1
+find -O3 . 2>&1 | /usr/bin/head -1
+find -P . 2>&1 | /usr/bin/head -1
 cd ..
 /bin/rm -rf find_t

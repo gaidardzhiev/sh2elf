@@ -14,43 +14,41 @@ ln -s nowhere dangling
 /usr/bin/touch -d @1200000000 cherry.txt
 /usr/bin/touch -d @900000000 date.c
 ls
+ls
+echo
 ls -a
 ls -A
 ls -1
-ls -C -w 40
-ls -x -w 40
-ls -m -w 40
+COLUMNS=40 ls -C
+COLUMNS=40 ls -x
+COLUMNS=40 ls -m
+ls -m
 ls -F
 ls -p
-ls --file-type
 ls -r
 ls -S
 ls -t apple banana cherry.txt date.c
 ls -tr apple banana cherry.txt date.c
-ls -X
-ls -v
-ls -U -1 apple
-ls -B
-ls -a -B
-ls -I '*.txt' -I 'f*'
-ls --hide='d*'
-ls -a --hide='d*'
+ls -u apple banana cherry.txt date.c
+ls -tu apple banana cherry.txt date.c
+ls -c -r apple banana cherry.txt date.c
 ls -d dir1 dir2
-ls --group-directories-first
-ls --sort=width
-ls -C -w 30 -T 0
-ls --format=commas -w 20
-ls --zero apple banana | tr '\0' '|'
-echo
-ls nofile
+ls -A -F dir1 dir2 run.sh
+ls -1F lnk dangling run.sh
+ls -Ap
+ls -- apple
+ls -a -A
+ls -C -1
+ls -m -x
+ls nofile 2>&1
 echo "rc=$?"
-ls apple nofile banana
+ls apple nofile banana 2>&1
 echo "rc=$?"
-ls -y
+ls apple -a 2>&1
 echo "rc=$?"
-ls --sort=bogus
-echo "rc=$?"
-ls --form=v
-echo "rc=$?"
+for o in -y -X -v -U -B -h -Q -b -N -G -Z -D -I -w -T --all --sort=size --format=long --color=always --hide=x --group-directories-first --zero --file-type --help --version; do
+	ls $o 2>&1
+	echo "rc=$?"
+done
 cd ..
 /bin/rm -rf ls_t

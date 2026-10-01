@@ -28,7 +28,7 @@ grep -i 'CAFÉ' t
 grep -o '[[:alpha:]]*é' t
 grep '[[=e=]]' t
 grep -c '.' t
-grep -E 'a|' t | head -2
+grep -E 'a|' t | head -n 2
 grep -E '*abc' t
 grep 'a\{1' t; echo rc=$?
 grep '\(' t; echo rc=$?

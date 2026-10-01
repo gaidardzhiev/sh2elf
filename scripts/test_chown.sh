@@ -1,1 +1,1 @@
-chown --reference=/tmp/sh2elf_chown.txt /tmp/sh2elf_chown.txt
+chown "$(id -u):$(id -g)" /tmp/sh2elf_chown.txt

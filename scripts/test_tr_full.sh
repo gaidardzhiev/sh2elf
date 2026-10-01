@@ -33,7 +33,19 @@ echo 'abc' | tr -d '[:alpha:]'
 printf 'a-b\n' | tr a-b- 1-3
 echo abc | tr 'a-' 'x'
 echo 'a-z' | tr -- '-a' '_x'
-echo abcd | tr -t 'abcd' 'xy'
+echo abcd | tr -t 'abcd' 'xy' 2>&1
+echo "rc=$?"
+echo abcd | tr --delete a 2>&1
+echo "rc=$?"
+echo abcd | tr '[a*2]' x 2>&1
+echo "rc=$?"
+echo abc | tr a b < /tmp 2>&1
+echo "rc=$?"
+T=tr
+echo 'Hello World' | $T '[:lower:]' '[:upper:]'
+echo 'aabbc' | $T -s ab
+S=a-c
+echo abcdef | tr "$S" xyz
 echo 'a*b' | tr '*' x
 echo 'a[b' | tr '[' x
 echo 'a]b' | tr ']' x
