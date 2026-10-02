@@ -2,7 +2,7 @@
 F=/tmp/sh2elf_big.txt
 seq 11000000 > $F
 cksum $F
-cksum -a crc32b < $F
+cksum < $F
 tac $F | cksum
 rev $F | cksum
 nl $F | cksum

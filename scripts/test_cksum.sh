@@ -4,11 +4,10 @@ printf 'The quick brown fox jumps over the lazy dog\n' > $F
 cksum $F
 cksum < $F
 printf '' | cksum
-cksum -a crc32b $F
-cksum -a sysv $F
-cksum -a bsd $F
-cksum --algorithm=bsd < $F
-echo "abc" | cksum -a sysv
+echo "abc" | cksum
+cksum $F - < $F
+cksum -a crc $F 2>&1
+echo "rc=$?"
 cksum /tmp/sh2elf_cksum_missing 2>/dev/null
 echo "rc=$?"
 rm -f $F

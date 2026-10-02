@@ -150,7 +150,28 @@ funlink() {
 fsleep() {
 	./sh2elf scripts/test_sleep.sh -o sleep.elf >/dev/null 2>&1
 	CAPTURE=$(./sleep.elf 2>/dev/null)
-	EXPECTED="sleep-done"
+	EXPECTED=$(cat <<'EOF'
+sleep-done
+zero-done
+dashdash-done
+sleep: invalid time interval 0.5
+usage: sleep time
+frac-rc=1
+sleep: invalid time interval 1m
+usage: sleep time
+suffix-rc=1
+sleep: extra operand 2
+usage: sleep time
+extra-rc=1
+sleep: missing operand
+usage: sleep time
+missing-rc=1
+killed=143
+trapped
+after=138
+sub=0
+EOF
+)
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
 		fprint "Sleep" "${G}PASSED${N}";
 		return 0;
@@ -241,7 +262,25 @@ fwc() {
 fkill() {
 	./sh2elf scripts/test_kill.sh -o kill.elf >/dev/null 2>&1
 	CAPTURE=$(./kill.elf 2>/dev/null)
-	EXPECTED="kill-passed"
+	EXPECTED=$(cat <<'EOF'
+kill-passed
+TERM
+KILL
+RTMIN
+62
+term=143
+int=130
+job=137
+prev=137
+cur=143
+zero=0
+kill: 999999: No such process
+kill: SIGTERM: invalid signal name
+kill: %7: no such job
+badnum=1
+noarg=1
+EOF
+)
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
 		fprint "Kill" "${G}PASSED${N}";
 		return 0;
@@ -278,11 +317,26 @@ fchmod() {
 }
 
 fbasename() {
-	./sh2elf scripts/test_basename.sh -o base.elf >/dev/null 2>&1
-	CAPTURE=$(./base.elf 2>/dev/null)
+	./sh2elf scripts/test_basename.sh -o basename.elf >/dev/null 2>&1
+	CAPTURE=$(./basename.elf 2>/dev/null)
 	EXPECTED=$(cat <<'EOF'
 gcc
 c
+b
+/
+/
+.txt
+a.
+y
+file.tar
+-x
+[]
+basename: invalid option -- 'a'
+usage: basename string [suffix]
+rc=1
+basename: extra operand c
+usage: basename string [suffix]
+rc=1
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -313,6 +367,18 @@ fdirname() {
 	EXPECTED=$(cat <<'EOF'
 /usr/bin
 /a/b
+.
+.
+/
+/
+a
+/
+.
+/tmp/dir.d
+-x
+dirname: extra operand b
+usage: dirname string
+rc=1
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -623,7 +689,21 @@ EOF
 funame() {
 	./sh2elf scripts/test_uname.sh -o uname.elf >/dev/null 2>&1
 	CAPTURE=$(./uname.elf 2>/dev/null)
-	EXPECTED="x86_64"
+	EXPECTED=$(cat <<'EOF'
+x86_64
+Linux
+node-ok
+release-ok
+all-ok
+order-ok
+uname: invalid option -- 'p'
+usage: uname [-amnrsv]
+rc=1
+uname: extra operand x
+usage: uname [-amnrsv]
+rc=1
+EOF
+)
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
 		fprint "Uname Cmd" "${G}PASSED${N}";
 		return 0;
@@ -647,8 +727,42 @@ fwhoami() {
 
 fid() {
 	./sh2elf scripts/test_id.sh -o id.elf >/dev/null 2>&1
-	./id.elf >/dev/null 2>&1
-	[ $? -eq 0 ] && {
+	CAPTURE=$(./id.elf 2>/dev/null)
+	EXPECTED=$(cat <<'EOF'
+id-rc=0
+full-ok
+groups-ok
+group-names-ok
+user-name-ok
+ids-ok
+uid=0(root) gid=0(root) groups=0(root)
+0
+root
+0
+root
+id: sh2elf_no_such_user: no such user
+rc=1
+id: printing only names or real IDs requires -u, -g, or -G
+usage: id [user]
+       id -G [-n] [user]
+       id -g [-nr] [user]
+       id -u [-nr] [user]
+rc=1
+id: cannot print "only" of more than one choice
+usage: id [user]
+       id -G [-n] [user]
+       id -g [-nr] [user]
+       id -u [-nr] [user]
+rc=1
+id: invalid option -- 'Z'
+usage: id [user]
+       id -G [-n] [user]
+       id -g [-nr] [user]
+       id -u [-nr] [user]
+rc=1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
 		fprint "Id Cmd" "${G}PASSED${N}";
 		return 0;
 	} || {
@@ -659,8 +773,30 @@ fid() {
 
 fenv() {
 	./sh2elf scripts/test_env.sh -o env.elf >/dev/null 2>&1
-	./env.elf >/dev/null 2>&1
-	[ $? -eq 0 ] && {
+	CAPTURE=$(./env.elf 2>/dev/null)
+	EXPECTED=$(cat <<'EOF'
+env-rc=0
+1
+A=2
+B=x y
+empty-rc=0
+SH2ELF_E=1
+SH2ELF_P=prefix
+val
+q
+/usr/bin
+Z=1
+child-rc=7
+env: sh_no_such_cmd_x: No such file or directory
+missing-rc=127
+env: /etc/passwd: Permission denied
+noexec-rc=126
+env: invalid option -- 'u'
+usage: env [-i] [name=value]... [utility [argument...]]
+badopt-rc=125
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
 		fprint "Env Cmd" "${G}PASSED${N}";
 		return 0;
 	} || {
@@ -1676,6 +1812,17 @@ same-file
 newer
 older
 paren-group
+and-op=2
+dbl-eq=2
+ne-ok
+bigint
+blank-int
+badint=2
+t-bad=1
+c-bytes
+collate
+neg3=1
+five=2
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -1691,13 +1838,26 @@ fecho_opts() {
 	./sh2elf scripts/test_echo_opts.sh -o echo_opts.elf >/dev/null 2>&1
 	CAPTURE=$(./echo_opts.elf 2>/dev/null)
 	EXPECTED=$(cat <<'EOF'
-no newline done
+-n no newline
+ done
+-e a	b
+c
 a	b
 c
-stop
-raw\tstay
-xAy
+stopnext
+
+-E raw	stay
+-ne xAy
 -- -dash
+ABC
+back\slash
+octal
+end
+\q unknown
+a next2
+no-newline-way:
+via printf
+-n value
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -1810,14 +1970,12 @@ fnl() {
  4:
  5:
  6:gamma
- 7:intro
-
-   head
-
- 1:body1
- 2:body2
-
-   foot
+       apple
+     1	berry
+     2	cherry
+nl: extra operand /tmp/sh2elf_nl.txt.d
+usage: nl [-p] [-b type] [-d delim] [-f type] [-h type] [-i incr] [-l num] [-n format] [-s sep] [-v startnum] [-w width] [file]
+rc=1
      1	piped line
 EOF
 )
@@ -1840,10 +1998,13 @@ first
 zy
 x
 
-c
-b:a::c
-:ba
-3ab2ab1abthird
+a:b:c
+0000000   x  \n  \n  \n
+0000004
+tac: invalid option -- 's'
+usage: tac [file...]
+rc=1
+third
 second
 first
 third
@@ -1968,25 +2129,12 @@ rdwith
 outspa
 ces 
 here
-a	
-bcdefghi
-j
-ab cd ef
- gh ij k
-l
-the quic
-k brown 
-fox jump
-s over t
-he lazy 
-dog
-日本語日
-本
+a	bcdefghij
+ab cd ef gh ij kl
+the quick brown fox jumps over the lazy dog
+日本語日本
 äääääää
-longword
-withouts
-paces he
-re
+longwordwithoutspaces here
 a	
 bcdefghij
 ab cd ef gh 
@@ -2000,6 +2148,8 @@ the lazy dog
 longwordwith
 outspaces 
 here
+fold: invalid number of columns: 0: Numerical result out of range
+rc=1
 no newl
 ine at 
 end
@@ -2063,9 +2213,44 @@ x
 65
 
 stop\c after
+stop
      7|ab  |
 no args %
 [  z]
+hello world
+a=1;b=2;
+xx
+yy
+   7|
+AB
+\101
+\x41
+\e
+\x41\e
+16 8 ffffffffffffffff
++5  5 +005
+./printf_full.elf: line 26: printf: 12x: value not completely converted
+12
+rc=1
+./printf_full.elf: line 28: printf: abc: expected a numeric value
+0
+rc=1
+./printf_full.elf: line 30: printf: 99999999999999999999: Numerical result out of range
+9223372036854775807
+rc=1
+a./printf_full.elf: line 32: printf: %q: invalid conversion specification
+rc=1
+./printf_full.elf: line 34: printf: %a: invalid conversion specification
+rc=1
+dash
+-v
+./printf_full.elf: line 38: printf: missing operand
+usage: printf format [argument...]
+rc=1
+1 2 3
+4  
+2 0.1 1.23e+02
+     |a  |
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -2087,8 +2272,8 @@ fxxd() {
 00000008: 72 6c 64 2c 20 74 68 69  rld, thi
 00000010: 73 20 69 73 20 78 78 64  s is xxd
 00000018: 20 74 65 73 74 01 ff      test..
-00000000: 68656C6C 6F0A776F 726C642C 20746869  hello.world, thi
-00000010: 73206973 20787864 20746573 7401FF    s is xxd test..
+00000000: 68656c6c 6f0a776f 726c642c 20746869  hello.world, thi
+00000010: 73206973 20787864 20746573 7401ff    s is xxd test..
 68656c6c6f0a776f726c642c207468697320697320787864207465737401
 ff
 68656c6c
@@ -2100,14 +2285,10 @@ ff
 20746573
 7401ff
 00000003: 6c6f 0a77 6f72 6c64 2c20                 lo.world, 
-0000001b: 7374 01ff                                st..
 00000010: 6865 6c6c                                hell
 00000000: 6c6c6568 6f770a6f 2c646c72 69687420  hello.world, thi
 00000010: 73692073 64787820 73657420   ff0174  s is xxd test..
-00000000: 01100001 01100010 01100011 01100100 01100101 01100110  abcdef
-00000006: 01100111                                               g
-00000000: 01101000 01100101 01101100 01101100  hell
-00000004: 01101111 00001010 01110111 01101111  o.wo
+00000000: 64636261   676665                    abcdefg
 unsigned char _tmp_sh2elf_xxd_bin[] = {
   0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x0a, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2c,
   0x20, 0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x78, 0x78, 0x64,
@@ -2125,6 +2306,9 @@ unsigned int _tmp_sh2elf_xxd_bin_len = 31;
 00000000: 6865 6c6c  hell
 00000004: 6f0a 776f  o.wo
 00000008: 72         r
+xxd: invalid option -- 'u'
+usage: xxd [-eipr] [-c cols] [-g bytes] [-l len] [-o off] [-s seek] [file]
+rc=1
 00000000: 68656c6c6f0a776f726c642c20746869  hello.world, thi
 00000010: 7320697320787864207465737401ff    s is xxd test..
 68656c6c6f0a776f726c642c207468697320697320787864207465737401
@@ -2144,25 +2328,26 @@ fcmp() {
 	./sh2elf scripts/test_cmp.sh -o cmp.elf >/dev/null 2>&1
 	CAPTURE=$(./cmp.elf 2>/dev/null)
 	EXPECTED=$(cat <<'EOF'
-a b differ: byte 8, line 2
+a b differ: char 8, line 2
 rc=1
-a b differ: byte 8, line 2 is 157 o 117 O
-cmp: EOF on ‘a’ after byte 12
- 8 157 117
+8 157 117
 10 154 114
+cmp: EOF on a after byte 12
 rc=1
-cmp: EOF on ‘a’ after byte 12
- 8 157 o    117 O
-10 154 l    114 L
-cmp: EOF on ‘c’ after byte 6, line 1
-cmp: EOF on ‘e’ which is empty
+rc=1
+cmp: EOF on c after byte 6, line 1
+cmp: EOF on e which is empty
 rc=1
 rc=0
-rc=0
-a b differ: byte 2, line 1
-a b differ: byte 1, line 1
-a b differ: byte 7, line 2 is 157 o 117 O
-- b differ: byte 8, line 2
+cmp: EOF on c after byte 6
+rc=1
+cmp: options -l and -s are incompatible
+usage: cmp [-l|-s] file1 file2
+rc=2
+cmp: extra operand c
+usage: cmp [-l|-s] file1 file2
+rc=2
+- b differ: char 8, line 2
 cmp: missing: No such file or directory
 rc=2
 EOF
@@ -2183,11 +2368,12 @@ fcksum() {
 2382472371 44 /tmp/sh2elf_cksum.txt
 2382472371 44
 4294967295 0
-1838399800 44 /tmp/sh2elf_cksum.txt
-4067 1 /tmp/sh2elf_cksum.txt
-25281     1 /tmp/sh2elf_cksum.txt
-25281     1
-304 1
+1112837078 4
+2382472371 44 /tmp/sh2elf_cksum.txt
+2382472371 44 -
+cksum: invalid option -- 'a'
+usage: cksum [file...]
+rc=1
 rc=1
 EOF
 )
@@ -2243,6 +2429,15 @@ fseq() {
 001
 002
 003
+0.5
+1.0
+1.5
+2.0
+0.1
+0.2
+0.3
+0.4
+0.5
 9223372036854775806
 9223372036854775807
 18446744073709551614
@@ -2321,7 +2516,7 @@ fhostname() {
 	EXPECTED=$(cat <<'EOF'
 hostname-ok
 short-ok
-long-opt-ok
+long-opt-rc=1
 set-rc=1
 EOF
 )
@@ -2340,8 +2535,7 @@ fnproc() {
 	EXPECTED=$(cat <<'EOF'
 nproc-ok
 all-ok
-1
-1
+long-opt-rc=1
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -2378,21 +2572,20 @@ freadlink() {
 	EXPECTED=$(cat <<'EOF'
 f
 l1
+nowhere
+readlink: f: Not a symbolic link
 plain-rc=1
-/tmp/sh2elf_rl/f
-/tmp/sh2elf_rl/f
-e-rc=1
-/tmp/sh2elf_rl/nowhere
-/tmp/sh2elf_rl/f
-/tmp/sh2elf_rl/nothere
-/tmp/sh2elf_rl/a/b/c
-/tmp/x/z
-f|
-readlink: f: Invalid argument
-0000000   f  \0
-0000002
+readlink: nothere: No such file or directory
+missing-rc=1
+readlink: invalid option -- 'f'
+usage: readlink [-n] file
 f-rc=1
-/usr
+f|
+0000000   f
+0000001
+readlink: extra operand l2
+usage: readlink [-n] file
+two-rc=1
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -2409,21 +2602,75 @@ fln() {
 	CAPTURE=$(./ln.elf 2>/dev/null)
 	EXPECTED=$(cat <<'EOF'
 f
-ln: failed to create symbolic link 'l1': File exists
+ln: failed to create symbolic link l1: File exists
 exists-rc=1
 forced
 2
-'h2' => 'f'
-'d/f' -> 'f'
 f
-ln: failed to access 'nosuch': No such file or directory
+ln: failed to access nosuch: No such file or directory
 missing-rc=1
-ln: failed to create symbolic link 'd': File exists
 f
 h1
 l1
-'e/h2' -> 'h2'
 h2
+ln: f and f are the same file
+same-rc=1
+3
+ln: target nodir: No such file or directory
+target-rc=1
+ln: failed to create symbolic link e/dir/f: File exists
+dir-rc=0
+6
+2
+ln: d: hard link not allowed for directory
+dirlink-rc=1
+ln: invalid option -- 'v'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- 'n'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- 'i'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- 'b'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- 'r'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- 'T'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- 't'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- '-'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: invalid option -- '-'
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: missing file operand
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+ln: missing destination file operand after f
+usage: ln [-fs] [-L|-P] source_file target_file
+       ln [-fs] [-L|-P] source_file... target_dir
+rc=1
+f
+ln: failed to access nosuch: No such file or directory
+rc=1
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -2447,16 +2694,19 @@ ftruncate() {
 64
 80
 1024
-2000
+2048
 1048576
 nocreate-rc=0
 t1
 4
-1048577
-948578
-truncate: cannot open 'nodir/x' for writing: No such file or directory
-truncate: Invalid number: ‘1.5K’
+5
+0
+truncate: cannot open nodir/x for writing: No such file or directory
+truncate: Invalid number: 1.5K
 invalid-rc=1
+truncate: invalid option -- 'r'
+usage: truncate [-c] -s size file...
+r-rc=1
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -2622,7 +2872,7 @@ fbig_input() {
 	CAPTURE=$(./big_input.elf 2>/dev/null)
 	EXPECTED=$(cat <<'EOF'
 1066600491 87888897 /tmp/sh2elf_big.txt
-2886012536 87888897
+1066600491 87888897
 798806947 87888897
 4082364691 87888897
 3142121490 175888899
@@ -3831,44 +4081,9 @@ ERROR: disk
 
 ERROR: disk
 error: net
-the lazy dog
-fox and dog
 jumps over
-ow
-ox
-ov
-og
-or
-ox
-og
-0:the quick brown fox
-68:fox and dog
-a:1:0:the quick brown fox
-a:3:31:the lazy dog
-the quick brown fox
-fox and dog
-two fox
 a
 b
-b
-the quick brown fox
-the quick brown fox
-jumps over
-jumps over
-the lazy dog
-3-the lazy dog
-4:ERROR: disk
-5-error: net
-the lazy dog
-ERROR: disk
-error: net
-
-fox and dog
-the quick brown fox
-XX
-fox and dog
-the quick brown fox
-fox and dog
 the quick brown fox
 error: net
 fox and dog
@@ -3876,15 +4091,6 @@ error: net
 the quick brown fox
 error: net
 fox and dog
-a: 1:	the quick brown fox
-a: 7:	fox and dog
-b: 2:	two fox
-0000000   a  \0   b  \0
-0000004
-[32m[K1[m[K[36m[K:[m[Kthe quick brown [01;31m[Kfox[m[K
-[32m[K7[m[K[36m[K:[m[K[01;31m[Kfox[m[K and dog
-in:the quick brown fox
-in:fox and dog
 rc=0
 rc=1
 a:the quick brown fox
@@ -3893,17 +4099,156 @@ rc=2
 rc=2
 rc=0
 2
-0000000   a  \0   b  \n   a   b  \n
-0000007
-0000000   x  \0   x  \0
-0000004
-0:o
-6:o
-9:o
-2
 rc=2
+grep: invalid option -- 'w'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
 rc=2
+grep: invalid option -- 'o'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
 rc=2
+grep: invalid option -- 'b'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'H'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'h'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'L'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'm'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'A'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'B'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'C'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '2'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'T'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'Z'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'a'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'z'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'r'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'R'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'P'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'G'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'V'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '-'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '-'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '-'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: cannot combine -c and -l
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: cannot combine -E and -F
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+a:2:jumps over
+a:3:the lazy dog
+a:4:ERROR: disk
+a:5:error: net
+a:6:
+b:1:one
+b:3:three
+a:2
+b:1
+a
+b
+jumps over
+6
+the quick brown fox
+fox and dog
+a:1:the quick brown fox
+a:7:fox and dog
+b:2:two fox
+ERROR: disk
+error: net
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -3940,15 +4285,9 @@ foo_bar baz
 12:30
 ÉCOLE
 k K
-foo_bar baz
-hello world
-foo_bar baz
-foo_bar baz
- world
- baz
- café
- 
- ß
+ss ß
+é café
+ab
 abc
 aXc
 ab
@@ -3960,8 +4299,6 @@ hello world
 foo_bar baz
 ÉCOLE
 é café
-é
-café
 hello world
 é café
 ÉCOLE
@@ -3975,8 +4312,6 @@ rc=2
 rc=2
 rc=2
 rc=2
-aaaa
-ab
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -3995,24 +4330,49 @@ fgrep_rec() {
 ./a.txt:hello
 ./d1/b.c:hello x
 ./d1/d2/c.txt:nohello
-a.txt:hello
-d1/b.c:hello x
-d1/d2/c.txt:nohello
 d1/b.c:1
 d1/d2/c.txt:1
-./d1/b.c:hello x
-a.txt:hello
-d1/d2/c.txt:nohello
-a.txt:hello
-d1/b.c:hello x
 hello x
-nohello
+./a.txt:hello
+./d1/d2/c.txt:nohello
+./a.txt:hello
+./d1/b.c:hello x
 ./a.txt
 ./d1/b.c
 ./d1/d2/c.txt
 rc=2
 a.txt:hello
-rc=1
+rc=2
+grep: invalid option -- 'r'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'R'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- 'd'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '-'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '-'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
+grep: invalid option -- '-'
+usage: grep [-E|-F] [-c|-l|-q] [-insvx] -e pattern_list [-e pattern_list]... [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] [-e pattern_list]... -f pattern_file [-f pattern_file]... [file...]
+       grep [-E|-F] [-c|-l|-q] [-insvx] pattern_list [file...]
+rc=2
 EOF
 )
 	[ "${CAPTURE}" = "${EXPECTED}" ] && {
@@ -6473,6 +6833,238 @@ EOF
 	}
 }
 
-{ fhello && fpipe && flogic && ftruefalse && fpwd && fstderr && fmkdir && frmdir && funlink && fsleep && ftestcmd && fexport && fcat && fhead && fwc && fkill && ftouch && fchmod && fbasename && fvars && fdirname && fprintf && fsubshell && fgroup && fif && fwhile && ffor && funtil && fread && funset && fcp && fmv && frm && ftee && fexpr && fparamexp && fcase && fheredoc && fcmdsub && farith && fglob && ffunc && funame && fwhoami && fid && fenv && flscmd && fgrep && ftr && fcut && fsort && funiq && ffind && fxargs && fsed && fawk && ftail && fchown && fchgrp && fgrepi && fgrepv && fgrepn && fgrepc && fheadn && ftailn && fcutdf && fsortr && fsortu && funiqc && funiqd && fwcl && fwcw && ffindname && fps && fkillall && fpgrep && fpkill && fnice && ftime && ftar && fgzip && fgunzip && fexprops && fpatternexp && fgetopts && feval && fshift && fpathexec && fhuge && fcompound_operands && floop_control && ftrap_signals && ffunc_return && fset_flags && fparam_assign_alt && ffd_redirs && fselect_loop && fproc_sub && fifs_splitting && farith_full && farith_cmd && fwhile_loop && fbrace_exp && fparam_ext && fansi_quote && fherestring && fnegation && fbackground && fruntime_params && ffunc_args && fcase_alt && ftest_ext && fecho_opts && fdquote_exp && frev && fnl && ftac && ffold && fbase64 && fprintf_full && fxxd && fcmp && fcksum && fseq && fyes && ffactor && fhostname && fnproc && fprintenv && freadlink && fln && ftruncate && fhead_full && fbig_input && ftail_full && ftail_follow && fwc_full && fcut_posix && fcut_full && ftr_full && ftr_posix && funiq_full && fsort_full && fsort_posix && fgrep_full && fgrep_regex && fgrep_rec && fls_full && fls_quote && fls_long && fls_rec && ffind_full && ffind_exec && ffind_pattern && ffind_time && fxargs_full && fxargs_exec && fcp_full && fcp_tree && fmv_full && fmv_xdev && frm_full && fmkdir_full && frmdir_full && ftouch_full && fchmod_full && fchown_full; RETURN="${?}"; } || exit 1
+fcat_full() {
+	./sh2elf scripts/test_cat_full.sh -o cat_full.elf >/dev/null 2>&1
+	CAPTURE=$(./cat_full.elf 2>/dev/null)
+	EXPECTED=$(cat <<'EOF'
+one
+two
+one
+two
+three
+no newline
+one
+two
+three
+one
+two
+in
+one
+two
+in
+three
+in
+three
+cat: nosuch: No such file or directory
+one
+two
+rc=1
+cat: dd: Is a directory
+rc=1
+rc=1
+one
+two
+cat: a: input file is output file
+one
+two
+cat: a: input file is output file
+three
+cat: f: input file is output file
+one
+two
+cat: a: input file is output file
+rc=1
+cat: invalid option -- 'n'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 'b'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 's'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 'v'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 'A'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 'e'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 't'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 'E'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- 'T'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- '-'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- '-'
+usage: cat [-u] [file...]
+rc=1
+cat: invalid option -- '-'
+usage: cat [-u] [file...]
+rc=1
+one
+two
+cat: a: input file is output file
+cat: -n: No such file or directory
+rc=1
+2052179976 588895
+2457222720 1177790
+one
+two
+cat: a: input file is output file
+three
+three
+one
+two
+cat: a: input file is output file
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Cat Full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Cat Full" "${R}FAILED${N}";
+		return 64;
+	}
+}
+
+ftee_full() {
+	./sh2elf scripts/test_tee_full.sh -o tee_full.elf >/dev/null 2>&1
+	CAPTURE=$(./tee_full.elf 2>/dev/null)
+	EXPECTED=$(cat <<'EOF'
+one
+two
+one
+two
+one
+two
+three
+one
+two
+three
+x
+x
+tee: nodir/f: No such file or directory
+x
+rc=1
+x
+tee: dd: Is a directory
+x
+rc=1
+rc=1
+x
+tee: /dev/full: No space left on device
+rc=1
+x
+tee: read error: Is a directory
+rc=1
+rc=0
+0
+2052179976 588895
+2052179976 588895
+x
+y
+int-rc=0
+x
+y
+tee: invalid option -- 'p'
+usage: tee [-ai] [file...]
+rc=1
+tee: invalid option -- 'x'
+usage: tee [-ai] [file...]
+rc=1
+tee: invalid option -- '-'
+usage: tee [-ai] [file...]
+rc=1
+tee: invalid option -- '-'
+usage: tee [-ai] [file...]
+rc=1
+tee: invalid option -- '-'
+usage: tee [-ai] [file...]
+rc=1
+x
+x
+rt
+rt
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Tee Full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Tee Full" "${R}FAILED${N}";
+		return 128;
+	}
+}
+
+fexpr_full() {
+	./sh2elf scripts/test_expr_full.sh -o expr_full.elf >/dev/null 2>&1
+	CAPTURE=$(./expr_full.elf 2>/dev/null)
+	EXPECTED=$(cat <<'EOF'
+7
+9
+-3
+-1
+100000000000000000000
+12499999887343749990
+0
+1
+1
+1
+0
+fallback
+0
+rc=1
+bc
+
+rc=1
+3
+5
+file
+file
+abc
+13
+-2
+x=2
+expr: division by zero
+rc=2
+expr: non-integer argument
+rc=2
+1
+expr: missing operand
+usage: expr operand...
+rc=2
+expr: syntax error: expecting ) after 1
+rc=2
+expr: Unmatched ( or \(
+rc=2
+expr: syntax error: unexpected argument abc
+rc=2
+expr: syntax error: unexpected argument abc
+rc=2
+expr: syntax error: unexpected argument ==
+rc=2
+0
+1
+EOF
+)
+	[ "${CAPTURE}" = "${EXPECTED}" ] && {
+		fprint "Expr Full" "${G}PASSED${N}";
+		return 0;
+	} || {
+		fprint "Expr Full" "${R}FAILED${N}";
+		return 256;
+	}
+}
+
+{ fhello && fpipe && flogic && ftruefalse && fpwd && fstderr && fmkdir && frmdir && funlink && fsleep && ftestcmd && fexport && fcat && fhead && fwc && fkill && ftouch && fchmod && fbasename && fvars && fdirname && fprintf && fsubshell && fgroup && fif && fwhile && ffor && funtil && fread && funset && fcp && fmv && frm && ftee && fexpr && fparamexp && fcase && fheredoc && fcmdsub && farith && fglob && ffunc && funame && fwhoami && fid && fenv && flscmd && fgrep && ftr && fcut && fsort && funiq && ffind && fxargs && fsed && fawk && ftail && fchown && fchgrp && fgrepi && fgrepv && fgrepn && fgrepc && fheadn && ftailn && fcutdf && fsortr && fsortu && funiqc && funiqd && fwcl && fwcw && ffindname && fps && fkillall && fpgrep && fpkill && fnice && ftime && ftar && fgzip && fgunzip && fexprops && fpatternexp && fgetopts && feval && fshift && fpathexec && fhuge && fcompound_operands && floop_control && ftrap_signals && ffunc_return && fset_flags && fparam_assign_alt && ffd_redirs && fselect_loop && fproc_sub && fifs_splitting && farith_full && farith_cmd && fwhile_loop && fbrace_exp && fparam_ext && fansi_quote && fherestring && fnegation && fbackground && fruntime_params && ffunc_args && fcase_alt && ftest_ext && fecho_opts && fdquote_exp && frev && fnl && ftac && ffold && fbase64 && fprintf_full && fxxd && fcmp && fcksum && fseq && fyes && ffactor && fhostname && fnproc && fprintenv && freadlink && fln && ftruncate && fhead_full && fbig_input && ftail_full && ftail_follow && fwc_full && fcut_posix && fcut_full && ftr_full && ftr_posix && funiq_full && fsort_full && fsort_posix && fgrep_full && fgrep_regex && fgrep_rec && fls_full && fls_quote && fls_long && fls_rec && ffind_full && ffind_exec && ffind_pattern && ffind_time && fxargs_full && fxargs_exec && fcp_full && fcp_tree && fmv_full && fmv_xdev && frm_full && fmkdir_full && frmdir_full && ftouch_full && fchmod_full && fchown_full && fcat_full && ftee_full && fexpr_full; RETURN="${?}"; } || exit 1
 
 [ "${RETURN}" -eq 0 ] 2>/dev/null || printf "%s\n" "${RETURN}"

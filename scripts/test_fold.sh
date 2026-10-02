@@ -5,8 +5,10 @@ fold -w 5 $F
 fold -s -w 10 $F
 fold -b -w 4 $F
 fold -bs -w 6 $F
-fold -8 $F
-fold --width=12 --spaces $F
+fold $F
+fold -w 12 -s $F
+fold -w 0 $F 2>&1
+echo "rc=$?"
 printf 'no newline at end' | fold -w 7
 echo
 rm -f $F

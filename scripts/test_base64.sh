@@ -4,7 +4,7 @@ printf 'The quick brown fox jumps over the lazy dog. 0123456789 !@#$%%^&*()' > $
 base64 $F
 base64 -w 0 $F
 echo
-base64 --wrap=16 $F
+base64 -w 16 $F
 printf 'hello world' | base64
 printf 'a' | base64
 base64 $F | base64 -d
@@ -15,7 +15,7 @@ echo 'aGVs#bG8=' | base64 -d 2>/dev/null
 echo " rc=$?"
 echo 'aGVs#bG8=' | base64 -di
 echo
-echo 'aGVsbG8=aGk=' | base64 --decode
+echo 'aGVsbG8=aGk=' | base64 -d
 echo
 echo 'aGVsbG8===' | base64 -d 2>/dev/null
 echo " rc=$?"

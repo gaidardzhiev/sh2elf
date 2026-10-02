@@ -22,7 +22,7 @@ echo 'hello' | tr -s l
 echo 'ABC' | tr '[:upper:]' 'a-c'
 echo 'abc' | tr '[:upper:]' '[:lower:]'
 echo 'a-b' | tr 'a-' 'xy'
-echo 'a\b' | tr '\\' 'Q'
+printf '%s\n' 'a\b' | tr '\\' 'Q'
 echo aaa | tr aa xy
 echo 'hello, world!! foo' | tr -cs 'a-z' '\n'
 echo 'aabbcc' | tr -s ab xx

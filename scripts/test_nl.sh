@@ -10,7 +10,10 @@ nl -bn $F
 printf 'intro\n\\:\\:\\:\nhead\n\\:\\:\nbody1\nbody2\n\\:\nfoot\n' > $F.d
 nl -ha -fa $F.d
 nl -p $F.d
-nl --body-numbering=a --number-width=2 --number-separator=: $F $F.d
+nl -ba -w2 -s: $F
+printf 'apple\nberry\ncherry\n' | nl -b 'p[ae]r'
+nl $F $F.d 2>&1
+echo "rc=$?"
 echo "piped line" | nl
 rm -f $F
 rm -f $F.d

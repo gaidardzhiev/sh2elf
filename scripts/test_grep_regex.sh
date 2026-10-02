@@ -19,13 +19,16 @@ grep 'o\>' t
 grep '\bbar' t
 grep 'o\Bo' t
 grep '\w\+_\w\+' t
-grep -o '\s[a-z]*' t
+grep 's[a-z]*' t
+grep '[[:alpha:]]*é' t
+grep -x 'ab' t
+R='o\>'
+grep "$R" t
 grep '^a' t
 grep 'c$' t
 grep -E '^(hello|foo)' t
 grep -i 'école' t
 grep -i 'CAFÉ' t
-grep -o '[[:alpha:]]*é' t
 grep '[[=e=]]' t
 grep -c '.' t
 grep -E 'a|' t | head -n 2
@@ -36,5 +39,3 @@ grep '[[:foo:]]' t; echo rc=$?
 grep '[:space:]' t; echo rc=$?
 grep -E 'x{2,1}' t; echo rc=$?
 grep '\1' t; echo rc=$?
-grep -w -o 'a*' t
-grep -x -o 'ab' t

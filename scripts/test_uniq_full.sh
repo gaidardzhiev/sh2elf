@@ -32,7 +32,7 @@ echo rc=$?
 uniq a b c 2>&1
 echo rc=$?
 seq 100000 | uniq -c | tail -n 1
-printf 'x\xc2\xa0a\ny\xc2\xa0a\n' | uniq -f1
+printf 'x\302\240a\ny\302\240a\n' | uniq -f1
 printf 'x\ta\ny a\n' | uniq -f1
 /usr/bin/printf '\xffa\n\xfea\n' | uniq -s1 | od -c
 uniq -s x f 2>&1

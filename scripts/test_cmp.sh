@@ -8,21 +8,22 @@ printf '' > $D/e
 cd $D
 cmp a b
 echo "rc=$?"
-cmp -b a b
 cmp -l a b 2>&1
 echo "rc=$?"
-cmp -lb a b 2>&1
+cmp -s a c
+echo "rc=$?"
 cmp a c 2>&1
 cmp e a 2>&1
 cmp -s a b
 echo "rc=$?"
 cmp a a
 echo "rc=$?"
-cmp -n 7 a b
+cmp -l a c 2>&1
 echo "rc=$?"
-cmp -i 2:3 a b
-cmp a b 7 7
-cmp --print-bytes --ignore-initial=1 a b
+cmp -ls a b 2>&1
+echo "rc=$?"
+cmp a b c 2>&1
+echo "rc=$?"
 cat a | cmp - b
 cmp a missing 2>&1
 echo "rc=$?"
